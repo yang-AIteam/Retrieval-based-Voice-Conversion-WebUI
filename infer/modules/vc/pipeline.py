@@ -308,8 +308,16 @@ class Pipeline(object):
         ):
             try:
                 index = faiss.read_index(file_index)
-                # big_npy = np.load(file_big_npy)
-                big_npy = index.reconstruct_n(0, index.ntotal)
+                # Cross-domain index: sensor features as keys, mic features as values.
+                # Companion file "cross_domain_mic_values.npy" sits next to the index.
+                cross_values_path = file_index.replace(
+                    "cross_domain_sensor_keys.index", "cross_domain_mic_values.npy"
+                )
+                if os.path.exists(cross_values_path):
+                    big_npy = np.load(cross_values_path)
+                    logger.info("Loaded cross-domain FAISS (sensor keys → mic values)")
+                else:
+                    big_npy = index.reconstruct_n(0, index.ntotal)
             except:
                 traceback.print_exc()
                 index = big_npy = None
