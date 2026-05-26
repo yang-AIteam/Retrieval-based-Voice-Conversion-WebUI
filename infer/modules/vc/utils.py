@@ -20,6 +20,7 @@ def get_index_path_from_model(sid):
 
 
 def load_hubert(config):
+    print("[sensor] load_hubert: loading sensor_hubert_rvc.pth")
     model = load_sensor_hubert(
         pth_path="assets/hubert/sensor_hubert_rvc.pth",
         config_path="assets/hubert/hf_model",
