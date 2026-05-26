@@ -1,6 +1,6 @@
 import os
 
-from fairseq import checkpoint_utils
+from rvc_hubert_loader import load_sensor_hubert
 
 
 def get_index_path_from_model(sid):
@@ -20,14 +20,11 @@ def get_index_path_from_model(sid):
 
 
 def load_hubert(config):
-    models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-        ["assets/hubert/hubert_base.pt"],
-        suffix="",
+    model = load_sensor_hubert(
+        pth_path="assets/hubert/sensor_hubert_rvc.pth",
+        config_path="assets/hubert/hf_model",
+        device=config.device,
     )
-    hubert_model = models[0]
-    hubert_model = hubert_model.to(config.device)
-    if config.is_half:
-        hubert_model = hubert_model.half()
-    else:
-        hubert_model = hubert_model.float()
-    return hubert_model.eval()
+    if config.is_half and config.device not in ("cpu", "mps"):
+        model = model.half()
+    return model

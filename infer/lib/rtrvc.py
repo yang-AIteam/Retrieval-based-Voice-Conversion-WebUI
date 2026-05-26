@@ -96,17 +96,14 @@ class RVC:
             self.resample_kernel = {}
 
             if last_rvc is None:
-                models, _, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-                    ["assets/hubert/hubert_base.pt"],
-                    suffix="",
+                from rvc_hubert_loader import load_sensor_hubert
+                hubert_model = load_sensor_hubert(
+                    pth_path="assets/hubert/sensor_hubert_rvc.pth",
+                    config_path="assets/hubert/hf_model",
+                    device=self.device,
                 )
-                hubert_model = models[0]
-                hubert_model = hubert_model.to(self.device)
-                if self.is_half:
+                if self.is_half and self.device not in ("cpu", "mps"):
                     hubert_model = hubert_model.half()
-                else:
-                    hubert_model = hubert_model.float()
-                hubert_model.eval()
                 self.model = hubert_model
             else:
                 self.model = last_rvc.model

@@ -13,7 +13,7 @@ Usage:
 Prerequisites:
     - Sensor wav files resampled to 16kHz must be in logs/<exp_name>/1_16k_wavs_sensor/
       (copy or symlink your *_sensor.wav files there after 16k resampling)
-    - assets/hubert/hubert_base.pt must exist
+    - assets/hubert/sensor_hubert_rvc.pth and assets/hubert/hf_model/ must exist
 """
 
 import os
@@ -23,7 +23,6 @@ import traceback
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
-import fairseq
 import numpy as np
 import soundfile as sf
 import torch
@@ -61,17 +60,16 @@ log(f"device: {device}")
 log(f"wav_dir: {wav_dir}")
 log(f"out_dir: {out_dir}")
 
-model_path = "assets/hubert/hubert_base.pt"
-if not os.access(model_path, os.F_OK):
-    log(f"Error: {model_path} not found. Run tools/dlmodels.sh first.")
+pth_path = "assets/hubert/sensor_hubert_rvc.pth"
+config_path = "assets/hubert/hf_model"
+if not os.access(pth_path, os.F_OK):
+    log(f"Error: {pth_path} not found. Copy your exported sensor HuBERT checkpoint here.")
     sys.exit(1)
 
-log(f"Loading HuBERT from {model_path}")
-models, saved_cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-    [model_path], suffix=""
-)
-model = models[0].to(device)
-model.eval()
+log(f"Loading sensor HuBERT from {pth_path}")
+sys.path.insert(0, os.getcwd())
+from rvc_hubert_loader import load_sensor_hubert
+model = load_sensor_hubert(pth_path=pth_path, config_path=config_path, device=device)
 log("Model loaded.")
 
 
@@ -82,9 +80,6 @@ def readwave(wav_path):
     if feats.dim() == 2:
         feats = feats.mean(-1)
     assert feats.dim() == 1
-    if saved_cfg.task.normalize:
-        with torch.no_grad():
-            feats = F.layer_norm(feats, feats.shape)
     return feats.view(1, -1)
 
 
