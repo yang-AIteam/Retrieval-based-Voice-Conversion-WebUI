@@ -34,7 +34,7 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # CONFIG  -- edit these
 # ---------------------------------------------------------------------------
-PAIRED_DATA_DIR = ""          # <-- 手动填入存放 2000+ 对 paired wav 的目录
+PAIRED_DATA_DIR = "/app/datasets/F0"          # <-- 手动填入存放 2000+ 对 paired wav 的目录
 N_PAIRS = 30                  # 随机抽取多少对来评测 (先 20~30 看趋势, 后续可调到 100+)
 SEED = 0                      # 随机种子, 固定以便复现
 METHODS = ["rmvpe", "harvest", "crepe"]   # 要对比的 sensor F0 方法
