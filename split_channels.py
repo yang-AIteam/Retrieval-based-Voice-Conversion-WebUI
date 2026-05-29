@@ -42,7 +42,7 @@ def split_stereo(input_path, output_dir=None):
 
 
 if __name__ == "__main__":
-    datasets_dir = os.path.join(os.path.dirname(__file__), "datasets")
+    datasets_dir = os.path.join(os.path.dirname(__file__), "datasets","jvc_voice_g")
     wav_files = glob.glob(os.path.join(datasets_dir, "*.wav"))
 
     # 既に分割済みのファイルは除外

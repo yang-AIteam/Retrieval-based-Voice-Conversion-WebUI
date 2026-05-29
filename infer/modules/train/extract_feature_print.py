@@ -18,11 +18,16 @@ else:
     os.environ["CUDA_VISIBLE_DEVICES"] = str(i_gpu)
     version = sys.argv[6]
     is_half = sys.argv[7].lower() == "true"
-import fairseq
+
 import numpy as np
 import soundfile as sf
 import torch
 import torch.nn.functional as F
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+from rvc_hubert_loader import load_sensor_hubert
+
+# Set True if your SensorHubert was trained with layer_norm on input
+SENSOR_HUBERT_NORMALIZE = False
 
 if "privateuseone" not in device:
     device = "cpu"
@@ -32,15 +37,7 @@ if "privateuseone" not in device:
         device = "mps"
 else:
     import torch_directml
-
     device = torch_directml.device(torch_directml.default_device())
-
-    def forward_dml(ctx, x, scale):
-        ctx.scale = scale
-        res = x.clone().detach()
-        return res
-
-    fairseq.modules.grad_multiply.GradMultiply.forward = forward_dml
 
 f = open("%s/extract_f0_feature.log" % exp_dir, "a+")
 
@@ -52,7 +49,9 @@ def printt(strr):
 
 
 printt(" ".join(sys.argv))
-model_path = "assets/hubert/hubert_base.pt"
+
+pth_path    = "assets/hubert/sensor_hubert_rvc.pth"
+config_path = "assets/hubert/hf_model"
 
 printt("exp_dir: " + exp_dir)
 wavPath = "%s/1_16k_wavs" % exp_dir
@@ -77,25 +76,16 @@ def readwave(wav_path, normalize=False):
     return feats
 
 
-# HuBERT model
-printt("load model(s) from {}".format(model_path))
-# if hubert model is exist
-if os.access(model_path, os.F_OK) == False:
-    printt(
-        "Error: Extracting is shut down because %s does not exist, you may download it from https://huggingface.co/lj1995/VoiceConversionWebUI/tree/main"
-        % model_path
-    )
+# SensorHubert model
+printt("load model(s) from {}".format(pth_path))
+if not os.path.isfile(pth_path):
+    printt("Error: Extracting is shut down because %s does not exist." % pth_path)
     exit(0)
-models, saved_cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-    [model_path],
-    suffix="",
-)
-model = models[0]
-model = model.to(device)
+
+model = load_sensor_hubert(pth_path=pth_path, config_path=config_path, device=device)
 printt("move model to %s" % device)
-if is_half:
-    if device not in ["mps", "cpu"]:
-        model = model.half()
+if is_half and device not in ["mps", "cpu"]:
+    model = model.half()
 model.eval()
 
 todo = sorted(list(os.listdir(wavPath)))[i_part::n_part]
@@ -113,7 +103,7 @@ else:
                 if os.path.exists(out_path):
                     continue
 
-                feats = readwave(wav_path, normalize=saved_cfg.task.normalize)
+                feats = readwave(wav_path, normalize=SENSOR_HUBERT_NORMALIZE)
                 padding_mask = torch.BoolTensor(feats.shape).fill_(False)
                 inputs = {
                     "source": (
@@ -122,13 +112,11 @@ else:
                         else feats.to(device)
                     ),
                     "padding_mask": padding_mask.to(device),
-                    "output_layer": 9 if version == "v1" else 12,  # layer 9
+                    "output_layer": 9 if version == "v1" else 12,
                 }
                 with torch.no_grad():
                     logits = model.extract_features(**inputs)
-                    feats = (
-                        model.final_proj(logits[0]) if version == "v1" else logits[0]
-                    )
+                    feats = logits[0]  # v2 only; v1 would need model.final_proj
 
                 feats = feats.squeeze(0).float().cpu().numpy()
                 if np.isnan(feats).sum() == 0:
