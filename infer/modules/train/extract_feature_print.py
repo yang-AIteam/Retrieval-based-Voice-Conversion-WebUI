@@ -18,11 +18,12 @@ else:
     os.environ["CUDA_VISIBLE_DEVICES"] = str(i_gpu)
     version = sys.argv[6]
     is_half = sys.argv[7].lower() == "true"
-import fairseq
 import numpy as np
 import soundfile as sf
 import torch
-import torch.nn.functional as F
+
+now_dir = os.getcwd()
+sys.path.append(now_dir)
 
 if "privateuseone" not in device:
     device = "cpu"
@@ -35,13 +36,6 @@ else:
 
     device = torch_directml.device(torch_directml.default_device())
 
-    def forward_dml(ctx, x, scale):
-        ctx.scale = scale
-        res = x.clone().detach()
-        return res
-
-    fairseq.modules.grad_multiply.GradMultiply.forward = forward_dml
-
 f = open("%s/extract_f0_feature.log" % exp_dir, "a+")
 
 
@@ -52,7 +46,10 @@ def printt(strr):
 
 
 printt(" ".join(sys.argv))
-model_path = "assets/hubert/hubert_base.pt"
+# 训练特征提取必须与推理 (infer/modules/vc/utils.py load_hubert) 完全一致,
+# 都用自训练的 SensorHubert, 才能消除训练/推理 OOD。
+pth_path = "assets/hubert/sensor_hubert_rvc.pth"
+config_path = "assets/hubert/hf_model"
 
 printt("exp_dir: " + exp_dir)
 wavPath = "%s/1_16k_wavs" % exp_dir
@@ -63,35 +60,31 @@ os.makedirs(outPath, exist_ok=True)
 
 
 # wave must be 16k, hop_size=320
-def readwave(wav_path, normalize=False):
+# 与推理 (infer/modules/vc/pipeline.py) 一致: sensor 波形只读成 mono float,
+# 绝不施加 F.layer_norm —— SensorHubert 是 normalize=False 训练, 加 layer_norm 是踩过的坑。
+def readwave(wav_path):
     wav, sr = sf.read(wav_path)
     assert sr == 16000
     feats = torch.from_numpy(wav).float()
     if feats.dim() == 2:  # double channels
         feats = feats.mean(-1)
     assert feats.dim() == 1, feats.dim()
-    if normalize:
-        with torch.no_grad():
-            feats = F.layer_norm(feats, feats.shape)
     feats = feats.view(1, -1)
     return feats
 
 
-# HuBERT model
-printt("load model(s) from {}".format(model_path))
-# if hubert model is exist
-if os.access(model_path, os.F_OK) == False:
+# SensorHubert model (与推理同一套权重/接口)
+printt("load model(s) from {}".format(pth_path))
+if os.access(pth_path, os.F_OK) == False:
     printt(
-        "Error: Extracting is shut down because %s does not exist, you may download it from https://huggingface.co/lj1995/VoiceConversionWebUI/tree/main"
-        % model_path
+        "Error: Extracting is shut down because %s does not exist. "
+        "请放置自训练的 SensorHubert 权重 (sensor_hubert_rvc.pth) 与 hf_model/ 配置。"
+        % pth_path
     )
     exit(0)
-models, saved_cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-    [model_path],
-    suffix="",
-)
-model = models[0]
-model = model.to(device)
+from rvc_hubert_loader import load_sensor_hubert
+
+model = load_sensor_hubert(pth_path=pth_path, config_path=config_path, device=device)
 printt("move model to %s" % device)
 if is_half:
     if device not in ["mps", "cpu"]:
@@ -113,7 +106,7 @@ else:
                 if os.path.exists(out_path):
                     continue
 
-                feats = readwave(wav_path, normalize=saved_cfg.task.normalize)
+                feats = readwave(wav_path)
                 padding_mask = torch.BoolTensor(feats.shape).fill_(False)
                 inputs = {
                     "source": (
@@ -122,13 +115,11 @@ else:
                         else feats.to(device)
                     ),
                     "padding_mask": padding_mask.to(device),
-                    "output_layer": 9 if version == "v1" else 12,  # layer 9
+                    "output_layer": 12,  # v2: SensorHubert layer-12 (768-d)
                 }
                 with torch.no_grad():
                     logits = model.extract_features(**inputs)
-                    feats = (
-                        model.final_proj(logits[0]) if version == "v1" else logits[0]
-                    )
+                    feats = logits[0]
 
                 feats = feats.squeeze(0).float().cpu().numpy()
                 if np.isnan(feats).sum() == 0:
