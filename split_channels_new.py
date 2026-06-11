@@ -20,10 +20,11 @@ import argparse
 import os
 import sys
 import warnings
+from typing import Optional, Tuple
 import numpy as np
 import scipy.io.wavfile as wf
 
-def split_stereo(input_path: str, output_dir: str | None = None) -> tuple[str, str]:
+def split_stereo(input_path: str, output_dir: Optional[str] = None) -> Tuple[str, str]:
     """
     Split a stereo WAV into _mic (L) and _sensor (R) mono files.
 
@@ -55,7 +56,7 @@ def split_stereo(input_path: str, output_dir: str | None = None) -> tuple[str, s
     return mic_path, sensor_path
 
 
-def process_path(target: str, output_dir: str | None = None):
+def process_path(target: str, output_dir: Optional[str] = None):
     if os.path.isfile(target):
         files = [target]
     elif os.path.isdir(target):
