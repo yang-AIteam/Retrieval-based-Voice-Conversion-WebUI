@@ -183,25 +183,22 @@ class PreProcess:
             self.pipeline(path, idx0)
 
     def pipeline_paired(self, mic_path, sensor_path, stem):
-        """配对模式: 一对同步录音 (mic 全频带 + sensor) 直接写出, 不做静音切片。
+        """mic2mic 变体: input 与 output 都取 mic 侧, sensor 侧不参与写出。
 
-        - mic   -> 重采样到模型 SR (self.sr, 通常 48k), 响度归一化, 写 0_gt_wavs/<stem>.wav
-        - sensor-> 确保 16k mono, 写 1_16k_wavs/<stem>.wav (不做 layer_norm 等推理侧没有的处理)
+        本分支 (VC-2-mic2mic) 与 VC-2 sensor2mic 的唯一区别:
+        1_16k_wavs (特征提取输入) 的来源从 sensor 换成 mic。
 
-        下游 f0/feature/filelist 都靠 stem 配对, 故两侧 stem 必须完全一致。
+        - mic -> 重采样到模型 SR (self.sr, 通常 48k), 响度归一化, 写 0_gt_wavs/<stem>.wav (output)
+        - mic -> 重采样到 16k mono, 写 1_16k_wavs/<stem>.wav (input, 供 SensorHubert 提特征)
+
+        sensor_path 仅由 discover_pairs 用于配对/对齐 stem, 这里不读取, 以便复用同一
+        配对数据集做对照实验 (gt(mic) 与 sensor2mic 完全一致, 唯一变量是 input)。
+        特征提取器仍是自训练 SensorHubert (extract_feature_print.py 不变)。
+        下游 f0/feature/filelist 都靠 stem 配对, 故 stem 必须完全一致。
         """
         try:
             mic_audio = load_audio(mic_path, self.sr)
-            sensor_audio = load_audio(sensor_path, 16000)
-
-            # 时长一致性核对 (同步录音、切点相同, 应满足)
-            mic_dur = len(mic_audio) / float(self.sr)
-            sensor_dur = len(sensor_audio) / 16000.0
-            if abs(mic_dur - sensor_dur) > 0.05:
-                println(
-                    "%s\t-> WARNING mic/sensor 时长不一致 mic=%.3fs sensor=%.3fs"
-                    % (stem, mic_dur, sensor_dur)
-                )
+            mic_audio_16k = load_audio(mic_path, 16000)
 
             if not self.norm_write_paired(mic_audio, stem):
                 return
@@ -209,9 +206,9 @@ class PreProcess:
             wavfile.write(
                 "%s/%s.wav" % (self.wavs16k_dir, stem),
                 16000,
-                sensor_audio.astype(np.float32),
+                mic_audio_16k.astype(np.float32),
             )
-            println("%s\t-> Success (paired)" % stem)
+            println("%s\t-> Success (mic2mic)" % stem)
         except:
             println("%s\t-> %s" % (stem, traceback.format_exc()))
 
