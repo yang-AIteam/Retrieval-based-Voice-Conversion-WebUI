@@ -13,7 +13,7 @@
 | 7 | §3 layer=12 同权重 | extract_feature_print.py:118 / extract_sensor_features.py:105 | ✅符合 | 均指定 output_layer=12，都用 sensor_hubert_rvc.pth |
 | 8 | §4.5 只用目标说话人 | — | ⚠️ 需运行机验证 | 运行机核 prepare_rvc_trainset |
 | 9 | §3 F0=rmvpe(sensor) SR=48k spk=0 | preprocess.py:195 读 1_16k_wavs(=sensor) | ⚠️ 需运行机验证 | 运行机核训练配置 |
-| 10 | §2 mic(gt) 不加高通 | preprocess.py:133-153 / 160,326 | 🔴 偏离 | norm_write_paired 未过滤；但 pipeline 行160 过滤 (非配对路径) |
+| 10 | §2 mic(gt) 不加高通 | preprocess.py:133-153 | ✅符合 | norm_write_paired 对 mic 只做响度归一化、不加高通——这是正确行为：gt 须保全频带 48k 重建目标 (§4.1)，加高通才是偏离。pipeline 行160 的高通属非配对路径，与此无关 |
 | 11 | 跨域 FAISS 是否同踩 #1 | extract_sensor_features.py:76-83 | 🔴 偏离 | 详见下 |
 
 ## #11 详情
