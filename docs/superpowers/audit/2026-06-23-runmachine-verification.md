@@ -105,6 +105,30 @@ python infer/modules/train/train.py \
 含义：`-sr 48k -v v2`（与数据一致）、`-f0 1`（有 F0）、`-bs` 批大小、`-te` 总 epoch、`-se 50`（每 50 epoch 存一次，= WebUI save frequency=50）、`-pg/-pd` 48k v2 预训练 G/D、`-l 1`（save only latest ckpt：只保留最新训练 ckpt `G_*/D_*` 省盘，**不影响** `-sw` 存到 `assets/weights/` 的推理权重）、`-c 1`（cache all training sets to GPU memory，小数据集提速；显存不够改 0）、`-sw 1`（每 50 epoch 存推理权重到 `assets/weights/<exp>_eXXX.pth`，A/B 就用这些）。
 **判据：** 训练日志 filelist 行数 = 样本数 + 2（mute）；loss 正常下降；`assets/weights/` 出现以实验名命名的 `.pth`。
 
+### 6.3 （可选）构建标准特征索引
+> **判定 #1 不需要索引**（§7 用 `--index_rate 0` 隔离生成器）。只有想跑 `--index_rate>0` 的检索增强对照时才建。
+> 复刻 `infer-web.py: train_index()`（v2，读 `3_feature768/`）。key=`SensorHubert(sensor)` 训练特征，与推理 query 同域、且已被 #1 修复对齐——与跨域索引（#11，需 `3_feature768`=mic）是两码事，**当前 paired 流程不要建跨域索引**。
+```bash
+EXP=stage9_handoff_fix-48k python - <<'PY'
+import os, faiss, numpy as np
+exp = os.environ["EXP"]; ver = "v2"
+exp_dir = f"logs/{exp}"; feat_dir = f"{exp_dir}/3_feature768"
+big = np.concatenate([np.load(f"{feat_dir}/{n}") for n in sorted(os.listdir(feat_dir))], 0)
+idx = np.arange(big.shape[0]); np.random.shuffle(idx); big = big[idx]
+np.save(f"{exp_dir}/total_fea.npy", big)
+n_ivf = min(int(16*np.sqrt(big.shape[0])), big.shape[0]//39)
+index = faiss.index_factory(768, f"IVF{n_ivf},Flat")
+faiss.extract_index_ivf(index).nprobe = 1
+index.train(big)
+faiss.write_index(index, f"{exp_dir}/trained_IVF{n_ivf}_Flat_nprobe_1_{exp}_{ver}.index")
+for i in range(0, big.shape[0], 8192):
+    index.add(big[i:i+8192])
+out = f"{exp_dir}/added_IVF{n_ivf}_Flat_nprobe_1_{exp}_{ver}.index"
+faiss.write_index(index, out); print("wrote", out)
+PY
+```
+**判据：** 生成 `logs/<exp>/added_IVF*_..._<exp>_v2.index`。该文件即推理 `--index_path` 的入参。
+
 ## 7. A/B 推理（判定 #1 是否为主因）
 
 用**训练集之外**的同一段 sensor，分别喂**新模型**和**旧 sensor2mic 模型**，**其余推理参数完全一致**（只换模型），听哪个更接近干净 mic。命令行推理用 `tools/infer_cli.py`（参数见其 argparse）。
