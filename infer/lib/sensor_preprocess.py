@@ -1,4 +1,4 @@
-"""Sensor 波形预处理: 与推理侧逐字节对齐 (训练特征提取的单一真相)。
+"""Sensor 波形预处理: 与推理侧操作等价 (训练特征提取的单一真相)。
 
 喂给 SensorHubert 的 sensor, 训练提特征时必须与推理时经过相同预处理, 否则残余 OOD。
 推理侧等价操作 (本模块即复刻它们, 改动这里务必同步核对推理):
@@ -17,12 +17,14 @@ _BH16, _AH16 = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 
 
 def match_inference_sensor_preprocess(audio):
-    """对 16k mono sensor 波形施加与推理逐字节相同的 peak-norm + 48Hz 高通。
+    """对 16k mono sensor 波形施加与推理操作等价的 peak-norm + 48Hz 高通。
 
     audio: 1-D numpy array @ 16000 Hz
     return: 处理后的 1-D float32 array
     """
     audio = np.asarray(audio, dtype=np.float64)
+    if audio.size == 0:  # 空片段: 不做处理直接返回, 避免 max() 在零长数组上报错
+        return audio.astype(np.float32)
     audio_max = np.abs(audio).max() / 0.95
     if audio_max > 1:
         audio = audio / audio_max

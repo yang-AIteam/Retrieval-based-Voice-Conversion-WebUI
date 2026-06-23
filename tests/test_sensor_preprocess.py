@@ -35,3 +35,9 @@ def test_highpass_removes_dc():
     audio = np.full(16000, 0.5, dtype=np.float32)  # 纯 DC
     out = match_inference_sensor_preprocess(audio)
     assert np.abs(out.mean()) < 1e-3  # 48Hz 高通滤除 DC
+
+
+def test_empty_input_returns_empty_float32():
+    out = match_inference_sensor_preprocess(np.array([], dtype=np.float32))
+    assert out.dtype == np.float32
+    assert out.size == 0
