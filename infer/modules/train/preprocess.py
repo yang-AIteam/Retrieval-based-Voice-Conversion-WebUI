@@ -22,6 +22,7 @@ from scipy.io import wavfile
 
 from infer.lib.audio import load_audio
 from infer.lib.slicer2 import Slicer
+from infer.lib.sensor_preprocess import match_inference_sensor_preprocess
 
 f = open("%s/preprocess.log" % exp_dir, "a+")
 
@@ -193,6 +194,8 @@ class PreProcess:
         try:
             mic_audio = load_audio(mic_path, self.sr)
             sensor_audio = load_audio(sensor_path, 16000)
+            # #1 修复: 对齐推理侧 sensor 预处理 (peak-norm + 48Hz 高通), 绝不 layer_norm
+            sensor_audio = match_inference_sensor_preprocess(sensor_audio)
 
             # 时长一致性核对 (同步录音、切点相同, 应满足)
             mic_dur = len(mic_audio) / float(self.sr)
