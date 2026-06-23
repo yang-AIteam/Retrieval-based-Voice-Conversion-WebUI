@@ -313,7 +313,10 @@ class Pipeline(object):
                 cross_values_path = file_index.replace(
                     "cross_domain_sensor_keys.index", "cross_domain_mic_values.npy"
                 )
-                if os.path.exists(cross_values_path):
+                # 仅当文件名确实是 cross-domain keys index 时 (replace 命中, 路径被改变)
+                # 才走 npy 旁路; 否则 cross_values_path 仍等于 .index 本身, 标准 index 会被
+                # 误当成 .npy 加载而报 "Cannot load file containing pickled data"。
+                if cross_values_path != file_index and os.path.exists(cross_values_path):
                     big_npy = np.load(cross_values_path)
                     logger.info("Loaded cross-domain FAISS (sensor keys → mic values)")
                 else:
