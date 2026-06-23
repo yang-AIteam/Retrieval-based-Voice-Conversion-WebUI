@@ -27,6 +27,7 @@ import numpy as np
 import soundfile as sf
 import torch
 import torch.nn.functional as F
+from infer.lib.sensor_preprocess import match_inference_sensor_preprocess
 
 exp_name = sys.argv[1]
 device_arg = sys.argv[2] if len(sys.argv) > 2 else "auto"
@@ -76,10 +77,14 @@ log("Model loaded.")
 def readwave(wav_path):
     wav, sr = sf.read(wav_path)
     assert sr == 16000, f"Expected 16kHz, got {sr}Hz: {wav_path}"
+    # stereo → mono (numpy 层完成, 与 helper 调用保持同层)
+    wav = np.asarray(wav, dtype=np.float32)
+    if wav.ndim == 2:
+        wav = wav.mean(axis=-1)
+    assert wav.ndim == 1
+    # 施加与推理侧等价的预处理 (peak-norm + 48Hz 高通), 消除 OOD
+    wav = match_inference_sensor_preprocess(wav)
     feats = torch.from_numpy(wav).float()
-    if feats.dim() == 2:
-        feats = feats.mean(-1)
-    assert feats.dim() == 1
     return feats.view(1, -1)
 
 
