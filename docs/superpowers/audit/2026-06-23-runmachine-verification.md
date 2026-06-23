@@ -100,9 +100,9 @@ python infer/modules/train/train.py \
   -e stage9_handoff_fix-48k -sr 48k -f0 1 -bs 4 -g 0 \
   -te 200 -se 50 \
   -pg assets/pretrained_v2/f0G48k.pth -pd assets/pretrained_v2/f0D48k.pth \
-  -l 1 -c 0 -sw 1 -v v2
+  -l 1 -c 1 -sw 1 -v v2
 ```
-含义：`-sr 48k -v v2`（与数据一致）、`-f0 1`（有 F0）、`-bs` 批大小、`-te` 总 epoch、`-se` 每几 epoch 存一次、`-pg/-pd` 48k v2 预训练 G/D、`-sw 1`（每次存权重到 `assets/weights/<exp>_eXXX.pth`）。
+含义：`-sr 48k -v v2`（与数据一致）、`-f0 1`（有 F0）、`-bs` 批大小、`-te` 总 epoch、`-se 50`（每 50 epoch 存一次，= WebUI save frequency=50）、`-pg/-pd` 48k v2 预训练 G/D、`-l 1`（save only latest ckpt：只保留最新训练 ckpt `G_*/D_*` 省盘，**不影响** `-sw` 存到 `assets/weights/` 的推理权重）、`-c 1`（cache all training sets to GPU memory，小数据集提速；显存不够改 0）、`-sw 1`（每 50 epoch 存推理权重到 `assets/weights/<exp>_eXXX.pth`，A/B 就用这些）。
 **判据：** 训练日志 filelist 行数 = 样本数 + 2（mute）；loss 正常下降；`assets/weights/` 出现以实验名命名的 `.pth`。
 
 ## 7. A/B 推理（判定 #1 是否为主因）
