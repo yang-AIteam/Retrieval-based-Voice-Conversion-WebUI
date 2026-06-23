@@ -61,9 +61,69 @@ python infer/modules/train/extract/extract_f0_rmvpe.py 1 0 0 logs/<exp> True
 ## 5. 只用目标说话人（#8）
 **判据：** `ls /app/data/rvc_trainset` 全部来自同一说话人 id，无串说话人；数量 ≈ 126 对。
 
-## 6. 开训 + A/B
-- 实验名 `vibravox_spk1_handoff_fix`，与旧 sensor2mic 模型同超参（便于对照）。
-- 用**训练集之外**的 sensor 推理，A/B：新模型 vs 旧 sensor2mic 模型。
-- **判据/判定：**
-  - 明显变好 → #1 是主因，旧负面结论作废重写。
-  - 几乎不变 → 转查非 bug 成因（数据量 126 对~10min、SensorHubert 质量，见 spec §6）。
+## 6. 开训
+
+训练前必须先有 `logs/<exp>/filelist.txt` 和 `logs/<exp>/config.json`。走 WebUI「训练」按钮会自动生成；命令行则用下面脚本复刻 `infer-web.py click_train` 的生成逻辑（v2 / 48k / f0 / spk_id=0 / 末尾追加 2 行 mute 参考）。
+
+### 6.1 生成 filelist + config（命令行）
+> 把 `EXP` 改成你的实验名（如 `stage9_handoff_fix-48k`）。依赖 `logs/mute/`（仓库自带）。
+```bash
+EXP=stage9_handoff_fix-48k python - <<'PY'
+import os, shutil
+from random import shuffle
+now = os.getcwd(); exp = os.environ["EXP"]
+sr, spk, ver, fea = "48k", 0, "v2", 768
+d   = f"{now}/logs/{exp}"
+gt  = f"{d}/0_gt_wavs"; fe = f"{d}/3_feature768"; f0 = f"{d}/2a_f0"; f0n = f"{d}/2b-f0nsf"
+names = (set(n.split('.')[0] for n in os.listdir(gt))
+         & set(n.split('.')[0] for n in os.listdir(fe))
+         & set(n.split('.')[0] for n in os.listdir(f0))
+         & set(n.split('.')[0] for n in os.listdir(f0n)))
+opt = [f"{gt}/{n}.wav|{fe}/{n}.npy|{f0}/{n}.wav.npy|{f0n}/{n}.wav.npy|{spk}" for n in names]
+for _ in range(2):  # mute 参考行 x2 (RVC 惯例)
+    opt.append(f"{now}/logs/mute/0_gt_wavs/mute{sr}.wav|{now}/logs/mute/3_feature{fea}/mute.npy|"
+               f"{now}/logs/mute/2a_f0/mute.wav.npy|{now}/logs/mute/2b-f0nsf/mute.wav.npy|{spk}")
+shuffle(opt)
+open(f"{d}/filelist.txt", "w").write("\n".join(opt))
+cfg = f"{d}/config.json"
+if not os.path.exists(cfg):
+    shutil.copy(f"{now}/configs/{ver}/{sr}.json", cfg)
+print("filelist lines =", len(opt), "(应 = 样本数 + 2)")
+PY
+```
+**判据：** `filelist lines` = 样本数 + 2；`logs/<exp>/config.json` 存在。
+
+### 6.2 启动训练
+> flag 定义见 `infer/lib/train/utils.py:300-365`。`-e` 只填实验**名**（train.py 自动加 `logs/` 前缀）。超参**必须与旧 sensor2mic 模型一致**（旧：200 epoch、bs=4）以便公平对照。
+```bash
+python infer/modules/train/train.py \
+  -e stage9_handoff_fix-48k -sr 48k -f0 1 -bs 4 -g 0 \
+  -te 200 -se 50 \
+  -pg assets/pretrained_v2/f0G48k.pth -pd assets/pretrained_v2/f0D48k.pth \
+  -l 1 -c 0 -sw 1 -v v2
+```
+含义：`-sr 48k -v v2`（与数据一致）、`-f0 1`（有 F0）、`-bs` 批大小、`-te` 总 epoch、`-se` 每几 epoch 存一次、`-pg/-pd` 48k v2 预训练 G/D、`-sw 1`（每次存权重到 `assets/weights/<exp>_eXXX.pth`）。
+**判据：** 训练日志 filelist 行数 = 样本数 + 2（mute）；loss 正常下降；`assets/weights/` 出现以实验名命名的 `.pth`。
+
+## 7. A/B 推理（判定 #1 是否为主因）
+
+用**训练集之外**的同一段 sensor，分别喂**新模型**和**旧 sensor2mic 模型**，**其余推理参数完全一致**（只换模型），听哪个更接近干净 mic。命令行推理用 `tools/infer_cli.py`（参数见其 argparse）。
+
+```bash
+# 新模型 (本次 #1 修复后训练得到的)
+python tools/infer_cli.py --f0method rmvpe \
+  --input_path /path/to/heldout_sensor.wav --opt_path out_NEW.wav \
+  --model_name <new_exp_weight>.pth --index_path "" \
+  --index_rate 0 --protect 0.33 --filter_radius 3
+
+# 旧模型 (之前结果不好的那个), 参数与上完全相同, 只改 model_name / opt_path
+python tools/infer_cli.py --f0method rmvpe \
+  --input_path /path/to/heldout_sensor.wav --opt_path out_OLD.wav \
+  --model_name <old_sensor2mic_weight>.pth --index_path "" \
+  --index_rate 0 --protect 0.33 --filter_radius 3
+```
+> `--model_name` 是 `assets/weights/` 下的 .pth 文件名。`--index_rate 0` 关掉 FAISS 检索，**隔离生成器本身**（避免索引混淆"是不是 #1 起作用"）；若要含索引另作一组、两边同样设置即可。两条命令除 model/opt 外**逐字相同**是公平对照的前提。
+
+**判定：**
+- `out_NEW` 明显比 `out_OLD` 更接近干净 mic → **#1 是主因**，旧负面结论作废重写。
+- 几乎不变 → #1 非主因，转查非 bug 成因（数据量 126 对~10min、SensorHubert 质量，见 design spec §6）。
