@@ -187,7 +187,8 @@ class PreProcess:
         """配对模式: 一对同步录音 (mic 全频带 + sensor) 直接写出, 不做静音切片。
 
         - mic   -> 重采样到模型 SR (self.sr, 通常 48k), 响度归一化, 写 0_gt_wavs/<stem>.wav
-        - sensor-> 确保 16k mono, 写 1_16k_wavs/<stem>.wav (不做 layer_norm 等推理侧没有的处理)
+        - sensor-> 16k mono, 经与推理操作等价的预处理 (peak-norm + 48Hz 高通, 绝不 layer_norm)
+                   后写 1_16k_wavs/<stem>.wav, 使训练特征与推理逐操作对齐 (#1 修复)
 
         下游 f0/feature/filelist 都靠 stem 配对, 故两侧 stem 必须完全一致。
         """
