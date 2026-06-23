@@ -131,23 +131,46 @@ PY
 
 ## 7. A/B 推理（判定 #1 是否为主因）
 
-用**训练集之外**的同一段 sensor，分别喂**新模型**和**旧 sensor2mic 模型**，**其余推理参数完全一致**（只换模型），听哪个更接近干净 mic。命令行推理用 `tools/infer_cli.py`（参数见其 argparse）。
+**铁律：**
+1. **不要拿新输出去比"那段存下来的旧烂音频"**——旧音频是另一套配方下生成的。必须把**旧模型重新跑一遍**。
+2. **一组对照里，两边的推理配方逐字相同**（同 `index_rate`/`protect`/`f0method`/`filter_radius`/同一段输入），只换 `--model_name`（和各自的 `--index_path`）。绝不能"旧带 FAISS vs 新不带 FAISS"——那会同时变两个变量。
+3. 输入用**训练集之外**的同一段 sensor。
 
+命令行推理用 `tools/infer_cli.py`。`--model_name` 是 `assets/weights/` 下的 .pth。
+
+### 7.A 组（隔离 #1，决定性，现在就能做、不需任何索引）
+两边都 `--index_rate 0`，关掉 FAISS、只比生成器本身。
 ```bash
-# 新模型 (本次 #1 修复后训练得到的)
+# 新模型 (#1 修复后训练得到)
 python tools/infer_cli.py --f0method rmvpe \
-  --input_path /path/to/heldout_sensor.wav --opt_path out_NEW.wav \
+  --input_path /path/to/heldout_sensor.wav --opt_path out_A_NEW.wav \
   --model_name <new_exp_weight>.pth --index_path "" \
   --index_rate 0 --protect 0.33 --filter_radius 3
 
-# 旧模型 (之前结果不好的那个), 参数与上完全相同, 只改 model_name / opt_path
+# 旧模型 (之前结果不好的那个), 除 model/opt 外逐字相同
 python tools/infer_cli.py --f0method rmvpe \
-  --input_path /path/to/heldout_sensor.wav --opt_path out_OLD.wav \
+  --input_path /path/to/heldout_sensor.wav --opt_path out_A_OLD.wav \
   --model_name <old_sensor2mic_weight>.pth --index_path "" \
   --index_rate 0 --protect 0.33 --filter_radius 3
 ```
-> `--model_name` 是 `assets/weights/` 下的 .pth 文件名。`--index_rate 0` 关掉 FAISS 检索，**隔离生成器本身**（避免索引混淆"是不是 #1 起作用"）；若要含索引另作一组、两边同样设置即可。两条命令除 model/opt 外**逐字相同**是公平对照的前提。
+
+### 7.B 组（还原真实部署，可选；旧结果当时就带 FAISS）
+两边用**相同**的 `--index_rate`（如 0.5）、`protect`、`f0method`，但**各配自己的索引**：旧模型→旧 index；新模型→按"与旧 index 同种方式 + 本次修复"重建的新 index。
+> ⚠️ 新 index 必须和旧 index **同一类型**才公平：旧是标准 RVC 索引(`added_IVF*.index`)→新用 §6.3 那条；旧是跨域索引(`cross_domain_*`)→新需另建跨域索引（当前 paired 流程下需先单独产出 mic 特征到 `3_feature768_sensor/` 对位，细节确认旧 index 类型后补）。
+```bash
+# 旧模型 + 旧 index
+python tools/infer_cli.py --f0method rmvpe \
+  --input_path /path/to/heldout_sensor.wav --opt_path out_B_OLD.wav \
+  --model_name <old_sensor2mic_weight>.pth --index_path /path/to/OLD.index \
+  --index_rate 0.5 --protect 0.33 --filter_radius 3
+# 新模型 + 新 index (同 index_rate/protect)
+python tools/infer_cli.py --f0method rmvpe \
+  --input_path /path/to/heldout_sensor.wav --opt_path out_B_NEW.wav \
+  --model_name <new_exp_weight>.pth --index_path /path/to/NEW.index \
+  --index_rate 0.5 --protect 0.33 --filter_radius 3
+```
 
 **判定：**
-- `out_NEW` 明显比 `out_OLD` 更接近干净 mic → **#1 是主因**，旧负面结论作废重写。
-- 几乎不变 → #1 非主因，转查非 bug 成因（数据量 126 对~10min、SensorHubert 质量，见 design spec §6）。
+- A、B 都是新的更好 → **#1 是主因**，旧负面结论作废重写。
+- A 看不出差、B 变好 → 是 **#11（索引修复）** 在起作用，不是 #1。
+- 两组都没差 → #1 非主因，转查非 bug 成因（数据量 126 对~10min、SensorHubert 质量，见 design spec §6）。
