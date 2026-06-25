@@ -163,9 +163,14 @@ class VC:
         f0_up_key = int(f0_up_key)
         try:
             audio = load_audio(input_audio_path, 16000)
-            audio_max = np.abs(audio).max() / 0.95
-            if audio_max > 1:
-                audio /= audio_max
+            if consist_off_enabled():
+                logger.info(
+                    "rvc_consist_off=1: 旁路输入 peak-norm (oldgen_consistOFF 臂)"
+                )
+            else:
+                audio_max = np.abs(audio).max() / 0.95
+                if audio_max > 1:
+                    audio /= audio_max
             times = [0, 0, 0]
 
             if self.hubert_model is None:

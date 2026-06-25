@@ -3,6 +3,17 @@ import os
 from rvc_hubert_loader import load_sensor_hubert
 
 
+def consist_off_enabled():
+    """oldgen_consistOFF 臂开关：置位时旁路推理侧喂给 SensorHubert 的两步预处理
+    （peak-norm + 48Hz 高通 filtfilt），使推理输入回到旧/已交付生成器训练时所见的
+    裸特征分布（在「裸」上一致）。默认关闭 → 维持正常 ON 行为，不影响 anchor/newgen。
+
+    通过环境变量 ``rvc_consist_off`` 控制（接受 1/true/yes，大小写不敏感）。
+    注意：只旁路 sensor 输入路径；绝不影响 gt/输出归一化，绝不加 layer_norm。
+    """
+    return os.environ.get("rvc_consist_off", "").strip().lower() in ("1", "true", "yes")
+
+
 def get_index_path_from_model(sid):
     return next(
         (

@@ -18,6 +18,8 @@ import torch.nn.functional as F
 import torchcrepe
 from scipy import signal
 
+from infer.modules.vc.utils import consist_off_enabled
+
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
@@ -326,7 +328,12 @@ class Pipeline(object):
                 index = big_npy = None
         else:
             index = big_npy = None
-        audio = signal.filtfilt(bh, ah, audio)
+        if consist_off_enabled():
+            logger.info(
+                "rvc_consist_off=1: 旁路 48Hz 高通 filtfilt (oldgen_consistOFF 臂)"
+            )
+        else:
+            audio = signal.filtfilt(bh, ah, audio)
         audio_pad = np.pad(audio, (self.window // 2, self.window // 2), mode="reflect")
         opt_ts = []
         if audio_pad.shape[0] > self.t_max:
