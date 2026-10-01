@@ -100,7 +100,7 @@ class RVC:
 
             if last_rvc is None:
                 models, _, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-                    ["assets/hubert/hubert_base.pt"],
+                    ["assets/hubert/kushinada_hubert_base.pt"],
                     suffix="",
                 )
                 hubert_model = models[0]
