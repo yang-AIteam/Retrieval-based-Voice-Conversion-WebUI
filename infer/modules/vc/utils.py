@@ -24,7 +24,7 @@ def get_index_path_from_model(sid):
 def load_hubert(config):
     torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
     models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-        ["assets/hubert/kushinada_hubert_base.pt"],
+        ["assets/hubert/hubert_base.pt"],
         suffix="",
     )
     hubert_model = models[0]
