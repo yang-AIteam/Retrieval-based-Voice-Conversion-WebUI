@@ -13,6 +13,7 @@
   - infer/modules/train/extract_feature_print.py
   - infer/modules/vc/utils.py
   - tools/rvc_for_realtime.py
+- 提交 f4d227a 已 Revert 上述 d7834c7，4 个加载点目前恢复为原 hubert_base.pt 路径（Revert 原因待用户说明）
 - 其他近期提交：移动 logs 文件、修复推理 UI 问题、修复特征提取问题、修正 curl 命令
 
 ## 技术发现
