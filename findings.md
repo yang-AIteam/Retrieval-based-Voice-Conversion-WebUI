@@ -38,3 +38,10 @@
 - 补充（2026-10-08）：项目中启动 Gradio 服务的入口只有 infer-web.py 和 tools/app.py（`app.launch()` 未指定 server_name，默认只监听 127.0.0.1:7860）
 - Dockerfile（CMD python3 infer-web.py，EXPOSE 7865）和 run.sh 会自动启动 infer-web.py
 - api_231006.py / api_240604.py 是 FastAPI 服务，监听 0.0.0.0:6242、无认证（/config、/start、/stop 等）。它们不受该 CVE 影响，但同样需要用安全组限制访问
+
+## 安全：CVE-2024-0964（Gradio 本地文件包含 / 路径穿越）评估（2026-10-08）
+- 漏洞：API 请求中用户可控的 JSON 值可远程触发本地文件包含，可读取服务器上的任意文件（来源：用户提供的 CVE 描述；osv.dev、GitLab Advisory）
+- 影响版本 gradio < 4.9.0，4.9.0 修复；CVSS 7.5（部分来源 9.4）。本项目 gradio==3.34.0，属于受影响范围
+- AWS 上的主要风险：读取 ~/.aws/credentials、.env、SSH 私钥、/proc/self/environ（环境变量中的 AWS 密钥）、模型与训练数据
+- 与 CVE-2024-47167 的区别：IMDSv2 对这个漏洞无效，关键是服务器上不要以文件或环境变量形式存放长期密钥
+- 缓解：与 CVE-2024-47167 相同的网络隔离（不对外开放端口、只用 SSH 隧道或 SSM 访问、不用时不启动 WebUI）；使用 IAM 角色而不是 Access Key；以非 root 用户运行；Docker 只挂载必要目录
