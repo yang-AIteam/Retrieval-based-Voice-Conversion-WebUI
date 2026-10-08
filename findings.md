@@ -46,3 +46,17 @@
 - 与 CVE-2024-47167 的区别：IMDSv2 对这个漏洞无效，关键是服务器上不要以文件或环境变量形式存放长期密钥
 - 缓解：与 CVE-2024-47167 相同的网络隔离（不对外开放端口、只用 SSH 隧道或 SSM 访问、不用时不启动 WebUI）；使用 IAM 角色而不是 Access Key；以非 root 用户运行；Docker 只挂载必要目录
 - 修复版本核实（2026-10-08）：GitHub Advisory GHSA-f3h9-8phc-6gvh（经 OSV API 读取）写明 PyPI gradio 影响范围 introduced 0、fixed 4.9.0；修复提交 d76bcaa “Fix api event drops (#6556)”，提交时间 2023-12-12 23:24 UTC，PyPI 上 4.9.0 发布于 2023-12-13 02:37 UTC，时间上吻合。CVE 原始记录（huntr 提交）本身没有给出版本号；没有在 git 里直接确认该提交属于 4.9.0 标签（GitHub compare API 返回 diverged）
+
+## 安全：CVE-2024-4325（Gradio SSRF，/queue/join + save_url_to_cache）评估（2026-10-08）
+- 漏洞：用户传入的 path 被当作 URL 发起请求，没有校验，可访问内网或 AWS 元数据服务；NVD CVSS 8.6 High（来源：用户提供的 NVD 描述）
+- OSV（GHSA-973g-55hp-3frw / PYSEC-2026-1413）范围为 introduced 0、last_affected 4.36.0（没有标注修复版本）；用 gradio 3.34.0 查询 OSV 时会命中这个 CVE
+- 静态阅读 gradio 3.34.0 wheel 源码（未实际复现）：
+  - 没有 save_url_to_cache 函数（这是 4.x 的代码），但有作用相同的旧实现
+  - gradio/components.py `Audio.preprocess`：is_file=True 且 name 是 URL 时，先调用 utils.validate_url（HEAD，遇到 403/405 再 GET），再调用 download_temp_copy_if_needed（requests.get 下载到临时目录），没有任何 IP 或域名限制 → 完整的 SSRF，并且内容会落盘
+  - gradio/routes.py `/file={path_or_url}`：对任意用户输入调用 validate_url，服务器会向该 URL 发起 HEAD/GET，再 302 跳转 → 盲 SSRF（看不到响应内容，但可探测内网），所有 3.34 应用都存在，不依赖具体组件；只有设置了 auth 时才需要登录
+- 本项目中的可达性：
+  - infer-web.py：gr.Audio 只作为输出（vc_output2，第 944 行），不会触发 Audio.preprocess；gr.File 在 3.34 中不会下载 URL；但 /file= 的盲 SSRF 仍然存在
+  - tools/app.py：vc_input3 = gr.Audio 作为输入 → 完整 SSRF 可达；但 launch() 默认只监听 127.0.0.1
+- AWS 上的风险：通过完整 SSRF 访问 IMDSv1 可拿到 IAM 凭证；盲 SSRF 只能探测，读不到凭证。IMDSv2 对这两条路径都有效（它们只发 HEAD/GET，没有 PUT）
+- 结论：缓解措施与 CVE-2024-47167 相同（网络隔离 + 强制 IMDSv2 + 最小权限的 IAM 角色）
+- 这些代码分析同样适用于 CVE-2024-47167 在 3.34 上的触发路径
