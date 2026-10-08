@@ -26,3 +26,12 @@
 ## 待查
 - kushinada 权重的来源、格式与存放路径
 - 各加载点是否还有遗漏的 hubert_base.pt 引用
+
+## 安全：CVE-2024-47167（Gradio SSRF）评估（2026-10-08）
+- 漏洞：Gradio `/queue/join` 中 `async_save_url_to_cache` 存在 SSRF，影响 gradio < 5.0（来源：用户提供的 CVE 描述）
+- 本项目锁定 `gradio==3.34.0`（requirements*.txt、pyproject.toml），属于受影响范围；未在 3.34 源码中逐行核实具体触发路径
+- 暴露面：infer-web.py:1614 以 `server_name="0.0.0.0"` 监听、无认证；Colab 模式（iscolab）用 `share=True` 生成公网链接
+- 使用了 gr.File / gr.Audio 等文件类组件
+- AWS 上的主要风险：通过 SSRF 访问 EC2 元数据服务 169.254.169.254，若允许 IMDSv1 可窃取 IAM 角色临时凭证；也可能访问 VPC 内部服务
+- 缓解：强制 IMDSv2（HttpTokens=required，容器内 hop limit=1）；IAM 角色最小权限或不挂角色；安全组只对可信 IP 开放 WebUI 端口（默认 7865）；不使用 share=True；必要时前置带认证的反向代理或使用 SSH 隧道 / SSM 端口转发访问
+- 升级到 gradio 5 需要大量改 UI 代码（如 queue(concurrency_count=...) 在 4.x 已移除），工作量较大
