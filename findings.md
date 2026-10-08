@@ -35,3 +35,6 @@
 - AWS 上的主要风险：通过 SSRF 访问 EC2 元数据服务 169.254.169.254，若允许 IMDSv1 可窃取 IAM 角色临时凭证；也可能访问 VPC 内部服务
 - 缓解：强制 IMDSv2（HttpTokens=required，容器内 hop limit=1）；IAM 角色最小权限或不挂角色；安全组只对可信 IP 开放 WebUI 端口（默认 7865）；不使用 share=True；必要时前置带认证的反向代理或使用 SSH 隧道 / SSM 端口转发访问
 - 升级到 gradio 5 需要大量改 UI 代码（如 queue(concurrency_count=...) 在 4.x 已移除），工作量较大
+- 补充（2026-10-08）：项目中启动 Gradio 服务的入口只有 infer-web.py 和 tools/app.py（`app.launch()` 未指定 server_name，默认只监听 127.0.0.1:7860）
+- Dockerfile（CMD python3 infer-web.py，EXPOSE 7865）和 run.sh 会自动启动 infer-web.py
+- api_231006.py / api_240604.py 是 FastAPI 服务，监听 0.0.0.0:6242、无认证（/config、/start、/stop 等）。它们不受该 CVE 影响，但同样需要用安全组限制访问
