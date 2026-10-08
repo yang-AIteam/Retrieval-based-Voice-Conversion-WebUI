@@ -45,3 +45,4 @@
 - AWS 上的主要风险：读取 ~/.aws/credentials、.env、SSH 私钥、/proc/self/environ（环境变量中的 AWS 密钥）、模型与训练数据
 - 与 CVE-2024-47167 的区别：IMDSv2 对这个漏洞无效，关键是服务器上不要以文件或环境变量形式存放长期密钥
 - 缓解：与 CVE-2024-47167 相同的网络隔离（不对外开放端口、只用 SSH 隧道或 SSM 访问、不用时不启动 WebUI）；使用 IAM 角色而不是 Access Key；以非 root 用户运行；Docker 只挂载必要目录
+- 修复版本核实（2026-10-08）：GitHub Advisory GHSA-f3h9-8phc-6gvh（经 OSV API 读取）写明 PyPI gradio 影响范围 introduced 0、fixed 4.9.0；修复提交 d76bcaa “Fix api event drops (#6556)”，提交时间 2023-12-12 23:24 UTC，PyPI 上 4.9.0 发布于 2023-12-13 02:37 UTC，时间上吻合。CVE 原始记录（huntr 提交）本身没有给出版本号；没有在 git 里直接确认该提交属于 4.9.0 标签（GitHub compare API 返回 diverged）
