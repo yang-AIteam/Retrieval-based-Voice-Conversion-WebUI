@@ -87,3 +87,14 @@
 - gradio 3.34.0 中的对应机制（静态阅读）：/proxy= 路由调用 routes.py:148 build_proxy_request，只允许代理 blocks.root_urls 中的主机；root_urls 只有在通过 gr.load() 加载外部应用时才会从其配置中填入（blocks.py:777–795、947），否则为空
 - 本项目中没有任何 gr.load() / Interface.load() / Blocks.load() 的调用（对全部 .py 文件 grep 无结果） → root_urls 始终为空，/proxy= 拒绝所有请求，攻击路径不成立
 - 结论：低风险（前提是今后不在本项目中使用 gr.load() 加载外部 Space）
+
+## 安全：如果改用 gradio 3.48.0，评估是否会变化（2026-10-09，静态阅读）
+- OSV 查询结果：3.48.0 和 3.34.0 命中的安全公告完全相同（各 77 条，包括 GHSA 和 PYSEC 的重复条目），今天评估的 5 个 CVE 全部仍然命中
+- 源码对比（gradio 3.48.0 wheel）：
+  - /file= 路由（routes.py:407–432）：仍然先对用户输入调用 validate_url，并且仍然允许下载 app.cwd 下的非 dotfile → 和 3.34 相同
+  - Audio.preprocess（components/audio.py:204–208）：URL 时仍然调用 download_temp_copy_if_needed（判断函数改成 client_utils.is_http_url_like）→ SSRF 相同
+  - File.preprocess（components/file.py:183）：仍然对用户传入的路径调用 make_temp_copy_if_needed；临时目录名仍然是文件内容的 sha1 → 和 3.34 相同
+  - tunneling.py：frpc 仍然没有 TLS 选项
+  - /proxy= 仍然依赖 root_urls（routes.py:167）
+  - Blocks.queue() 仍然有 concurrency_count 参数，infer-web.py 的写法应该可以继续使用（未实际运行确认）
+- 结论：改用 3.48.0，5 个 CVE 的风险等级都不变；要修复必须升级到 5.x 以上（CVE-2026-28416 要 6.6.0 以上）
