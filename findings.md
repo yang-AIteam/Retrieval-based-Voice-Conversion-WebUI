@@ -70,3 +70,13 @@
   - .env、~/.aws 等以 . 开头的路径会被 /file= 拒绝（403）
 - WebUI 自身的功能允许指定服务器上的文件夹路径（批量转换的输入/输出、训练数据目录等），设计上就不适合对外公开
 - 结论修正：CVE-2024-0964 这条路径本身“直接读取任意文件较难”，但项目目录下的模型和训练语音数据在当前公开状态下可以被直接下载，整体判断为高风险
+
+## 安全：CVE-2024-47871（Gradio share=True 时 FRP 隧道未加密）评估（2026-10-09）
+- 漏洞：share=True 时，FRP 客户端与服务器之间没有强制 HTTPS，通信内容（包括上传的文件）可被窃听或篡改；NVD CVSS 9.1 Critical（来源：用户提供的 NVD 描述）
+- OSV（GHSA-279j-x4gx-hfrh / PYSEC-2024-219）：影响范围 introduced 0、fixed 5.0.0；用 3.34.0 查询会命中
+- gradio 3.34.0 tunneling.py `_start_tunnel`：frpc 启动参数中没有 TLS 相关选项，和 CVE 描述一致（静态阅读）
+- 本项目只有 infer-web.py:1612 使用 share=True，条件是 config.iscolab，而它只在加了 --colab 命令行参数时为真（configs/config.py:82）
+  - --colab 只出现在两个 Colab 笔记本（Retrieval_based_Voice_Conversion_WebUI*.ipynb）中；run.sh、Dockerfile、go-web*.bat 都不带这个参数
+  - tools/app.py 的 launch() 也没有使用 share
+- 结论：在 AWS 上按常规方式启动（不加 --colab）时，不会建立 FRP 隧道，不受影响 → 低风险
+- 另外：7865 端口本身是明文 HTTP，如果直接对外公开，也会被窃听。这不属于本 CVE，但属于同类问题；改用 SSH 隧道或 SSM 访问可以一并解决
