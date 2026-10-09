@@ -80,3 +80,10 @@
   - tools/app.py 的 launch() 也没有使用 share
 - 结论：在 AWS 上按常规方式启动（不加 --colab）时，不会建立 FRP 隧道，不受影响 → 低风险
 - 另外：7865 端口本身是明文 HTTP，如果直接对外公开，也会被窃听。这不属于本 CVE，但属于同类问题；改用 SSH 隧道或 SSM 访问可以一并解决
+
+## 安全：CVE-2026-28416（Gradio gr.load() 的 proxy_url 注入导致 SSRF）评估（2026-10-09）
+- 漏洞：应用用 gr.load() 加载攻击者控制的 Space 时，Space 配置中的 proxy_url 会被加入代理白名单，攻击者可以借此让服务器访问内部服务或云元数据；6.6.0 修复；NVD 8.6 / GitHub 8.2 High（来源：用户提供的 NVD 描述）
+- OSV（GHSA-jmh7-g254-2cq9 / PYSEC-2026-66）：用 3.34.0 查询会命中
+- gradio 3.34.0 中的对应机制（静态阅读）：/proxy= 路由调用 routes.py:148 build_proxy_request，只允许代理 blocks.root_urls 中的主机；root_urls 只有在通过 gr.load() 加载外部应用时才会从其配置中填入（blocks.py:777–795、947），否则为空
+- 本项目中没有任何 gr.load() / Interface.load() / Blocks.load() 的调用（对全部 .py 文件 grep 无结果） → root_urls 始终为空，/proxy= 拒绝所有请求，攻击路径不成立
+- 结论：低风险（前提是今后不在本项目中使用 gr.load() 加载外部 Space）
