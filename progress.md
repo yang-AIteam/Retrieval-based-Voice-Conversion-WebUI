@@ -53,3 +53,4 @@
 - 阅读 infer-web.py `train_index()`，编写手动构建索引脚本（未纳入仓库，放在 scratchpad），语法检查通过；未在真实数据上运行
 - 用户询问能否用 build_cross_domain_index.py 代替：确认其用途不同（跨域 sensor→mic），当前分支无该文件及配套 pipeline 改动
 - 用户需在另一台 PC 上构建索引：将 train_index_manual.py 加入仓库 tools/ 并推送（此前仅在本机 scratchpad）
+- 将 tools/train_index_manual.py 同步提交到 VC-1 分支（c0258fc，用户另一台 PC 在 VC-1 上工作）
