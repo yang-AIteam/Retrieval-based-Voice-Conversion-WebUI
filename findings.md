@@ -98,3 +98,9 @@
   - /proxy= 仍然依赖 root_urls（routes.py:167）
   - Blocks.queue() 仍然有 concurrency_count 参数，infer-web.py 的写法应该可以继续使用（未实际运行确认）
 - 结论：改用 3.48.0，5 个 CVE 的风险等级都不变；要修复必须升级到 5.x 以上（CVE-2026-28416 要 6.6.0 以上）
+
+## 2026-10-19：feature index 手动构建方法
+- WebUI 的索引训练逻辑在 infer-web.py 的 `train_index()`：读取 `logs/<实验名>/3_feature768`（v1 为 3_feature256）下所有 .npy → 拼接打乱 → 样本数 > 20 万时 MiniBatchKMeans 压缩到 1 万中心 → faiss `IVF{n_ivf},Flat` 训练并 add → 写出 `added_IVF..._<实验名>_<版本>.index`。
+- `n_ivf = min(16*sqrt(N), N//39)`：样本数 < 39 时 n_ivf=0，faiss 会报错；数据过少是失败原因之一。
+- macOS 上 faiss 与 torch 的 OpenMP 冲突（OMP Error #15 / 段错误）常导致此步骤崩溃，可设置 `KMP_DUPLICATE_LIB_OK=TRUE`、`OMP_NUM_THREADS=1`。
+- tools/infer/train-index-v2.py 为旧脚本，路径硬编码，不宜直接使用；已为用户提供独立脚本（scratchpad 中的 train_index_manual.py）。

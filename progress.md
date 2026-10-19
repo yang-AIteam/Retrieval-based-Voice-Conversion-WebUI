@@ -47,3 +47,7 @@
 | 目标是什么？ | 日语 hubert（kushinada）适配（待用户确认） |
 | 我学到了什么？ | 见 findings.md |
 | 我做了什么？ | 创建规划文件与 CLAUDE.md |
+
+## 会话：2026-10-19
+- 用户反馈微调时 feature index 每次都无法生成，询问手动方法
+- 阅读 infer-web.py `train_index()`，编写手动构建索引脚本（未纳入仓库，放在 scratchpad），语法检查通过；未在真实数据上运行
