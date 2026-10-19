@@ -105,3 +105,4 @@
 - macOS 上 faiss 与 torch 的 OpenMP 冲突（OMP Error #15 / 段错误）常导致此步骤崩溃，可设置 `KMP_DUPLICATE_LIB_OK=TRUE`、`OMP_NUM_THREADS=1`。
 - tools/infer/train-index-v2.py 为旧脚本，路径硬编码，不宜直接使用；已为用户提供独立脚本 tools/train_index_manual.py（已纳入仓库）。
 - build_cross_domain_index.py 不在当前分支 VC-1-K，只存在于提交 799ba3a（VC-2、origin/VC-1 等分支）。它用于 sensor→mic 跨域检索：以 3_feature768_sensor 为 key 建索引，配对的 mic 特征存为 cross_domain_mic_values.npy；需要 extract_sensor_features.py 生成的配对特征，以及同一提交中修改过的 pipeline.py 才会读取 values。不能替代普通 feature index。
+- VC-1 推理报错 `Cannot load file containing pickled data when allow_pickle=False` 的原因：799ba3a 修改的 pipeline.py 中 `file_index.replace("cross_domain_sensor_keys.index", ...)` 对普通 index 返回原路径，`os.path.exists` 为真，于是对 faiss index 文件执行 np.load。异常被 try/except 吞掉后 index=None，合成仍会继续，但检索（index_rate）完全失效。

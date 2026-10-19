@@ -54,3 +54,4 @@
 - 用户询问能否用 build_cross_domain_index.py 代替：确认其用途不同（跨域 sensor→mic），当前分支无该文件及配套 pipeline 改动
 - 用户需在另一台 PC 上构建索引：将 train_index_manual.py 加入仓库 tools/ 并推送（此前仅在本机 scratchpad）
 - 将 tools/train_index_manual.py 同步提交到 VC-1 分支（c0258fc，用户另一台 PC 在 VC-1 上工作）
+- 修复 VC-1 的 pipeline.py：仅当 cross_values_path 与 file_index 不同时才加载 cross_domain_mic_values.npy（cec22cc，已推送 origin/VC-1）。用模拟文件验证分支逻辑：普通 index→reconstruct_n，跨域 index→加载 npy；未进行实际推理测试
