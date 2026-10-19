@@ -313,10 +313,7 @@ class Pipeline(object):
                 cross_values_path = file_index.replace(
                     "cross_domain_sensor_keys.index", "cross_domain_mic_values.npy"
                 )
-                # 通常の index では replace が同じパスを返すため、別ファイルの場合のみ読む
-                if cross_values_path != file_index and os.path.exists(
-                    cross_values_path
-                ):
+                if os.path.exists(cross_values_path):
                     big_npy = np.load(cross_values_path)
                     logger.info("Loaded cross-domain FAISS (sensor keys → mic values)")
                 else:
