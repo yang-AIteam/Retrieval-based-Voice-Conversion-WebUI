@@ -57,3 +57,4 @@
 - 修复 VC-1 的 pipeline.py：仅当 cross_values_path 与 file_index 不同时才加载 cross_domain_mic_values.npy（cec22cc，已推送 origin/VC-1）。用模拟文件验证分支逻辑：普通 index→reconstruct_n，跨域 index→加载 npy；未进行实际推理测试
 - 用户询问是否应切换到 VC-2：对比两分支，建议当前实验继续在 VC-1；仅在需要配对训练时切换
 - 按用户要求 revert VC-1 上的 c0258fc、cec22cc（b011e51、5f85408，已推送；内容与 c24c706 一致）。用户将在另一台 PC 改用 VC-1-K
+- 用户更正：VC-1-K 不支持新 hubert，继续用 VC-1。将 np.load 修复 cherry-pick 回 VC-1（0af5350，已推送）；train_index_manual.py 未恢复
