@@ -52,6 +52,7 @@
 |------|------|
 | 使用 planning-with-files 管理任务 | 任务跨多次会话，需要持久化记录 |
 | 三个规划文件纳入 git 并同步到 GitHub | 用户要求，详见 CLAUDE.md |
+| 2026-10-19：另一台 PC 改用 VC-1-K 训练，VC-1 恢复原状 | VC-1/VC-2 含 SensorHubert 与 cross_domain 改动，VC-1-K 为原版 pipeline，index 可正常加载 |
 
 ## 遇到的错误
 | 错误 | 尝试次数 | 解决方案 |
