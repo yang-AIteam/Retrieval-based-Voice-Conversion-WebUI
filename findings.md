@@ -104,3 +104,4 @@
 - `n_ivf = min(16*sqrt(N), N//39)`：样本数 < 39 时 n_ivf=0，faiss 会报错；数据过少是失败原因之一。
 - macOS 上 faiss 与 torch 的 OpenMP 冲突（OMP Error #15 / 段错误）常导致此步骤崩溃，可设置 `KMP_DUPLICATE_LIB_OK=TRUE`、`OMP_NUM_THREADS=1`。
 - tools/infer/train-index-v2.py 为旧脚本，路径硬编码，不宜直接使用；已为用户提供独立脚本（scratchpad 中的 train_index_manual.py）。
+- build_cross_domain_index.py 不在当前分支 VC-1-K，只存在于提交 799ba3a（VC-2、origin/VC-1 等分支）。它用于 sensor→mic 跨域检索：以 3_feature768_sensor 为 key 建索引，配对的 mic 特征存为 cross_domain_mic_values.npy；需要 extract_sensor_features.py 生成的配对特征，以及同一提交中修改过的 pipeline.py 才会读取 values。不能替代普通 feature index。

@@ -51,3 +51,4 @@
 ## 会话：2026-10-19
 - 用户反馈微调时 feature index 每次都无法生成，询问手动方法
 - 阅读 infer-web.py `train_index()`，编写手动构建索引脚本（未纳入仓库，放在 scratchpad），语法检查通过；未在真实数据上运行
+- 用户询问能否用 build_cross_domain_index.py 代替：确认其用途不同（跨域 sensor→mic），当前分支无该文件及配套 pipeline 改动
