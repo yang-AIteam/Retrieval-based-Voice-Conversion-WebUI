@@ -109,3 +109,8 @@
 - VC-1 与 VC-2 对比（2026-10-19）：两者从同一点分叉。VC-2 独有：配对训练（preprocess.py 支持 mic/ 与 sensor/ 配对数据集）、build_feature_index.py、split_channels_new.py、prepare_rvc_trainset.py；但删除了 requirements.txt，且仍有 cross_domain 的 np.load bug（未修复）。VC-1 独有：删除 hubert_inputs.pth、extract_feature_print 整理、train_index_manual.py、np.load 修复。两边特征提取都使用 SensorHubert（sensor_hubert_rvc.pth）。
 - VC-1-K 不受 np.load bug 影响：VC-1-K 与 VC-1 在 6bdb14c（2026-05-14）分叉，不包含 799ba3a（2026-05-19），pipeline.py 仍为原版 reconstruct_n 逻辑。
 - VC-1 训练参数：WebUI batch_size 滑块上限 40（infer-web.py:1309）；configs/v2/48k.json 学习率固定 1e-4、fp16_run=true，不随 batch size 缩放。用户显存 80GB、训练数据 1000 组。
+
+## 立体声拆分为 mic / sensor 的脚本（2026-10-20 调查）
+- VC-1：`split_channels.py`（wave+struct，L=mic，R=sensor，硬编码处理 `datasets/jvc_voice_g/*.wav`，输出 `<名>_mic.wav` / `<名>_sensor.wav` 到同目录，跳过已拆分文件和非立体声文件）
+- VC-1-K：`split_channels_new.py`（4beb64d，scipy，命令行参数 `<文件或文件夹> [--out 输出目录]`，同样 L=mic、R=sensor）
+- VC-2：两个脚本都有
