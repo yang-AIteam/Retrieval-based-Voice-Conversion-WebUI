@@ -114,3 +114,7 @@
 - VC-1：`split_channels.py`（wave+struct，L=mic，R=sensor，硬编码处理 `datasets/jvc_voice_g/*.wav`，输出 `<名>_mic.wav` / `<名>_sensor.wav` 到同目录，跳过已拆分文件和非立体声文件）
 - VC-1-K：`split_channels_new.py`（4beb64d，scipy，命令行参数 `<文件或文件夹> [--out 输出目录]`，同样 L=mic、R=sensor）
 - VC-2：两个脚本都有
+
+## VC-1 能否训练原版 RVC（2026-10-22 调查）
+- 不能：VC-1 把 SensorHubert 写死在三处，没有开关——特征提取 `infer/modules/train/extract_feature_print.py`（pth_path=assets/hubert/sensor_hubert_rvc.pth）、推理 `infer/modules/vc/utils.py` 的 `load_hubert()`、实时变声 `infer/lib/rtrvc.py`
+- 原版 RVC（fairseq `assets/hubert/hubert_base.pt`）用 VC-1-K；两边的特征、模型、index 不能混用
