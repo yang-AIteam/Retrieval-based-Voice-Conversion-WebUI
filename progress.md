@@ -60,3 +60,4 @@
 - 用户更正：VC-1-K 不支持新 hubert，继续用 VC-1。将 np.load 修复 cherry-pick 回 VC-1（0af5350，已推送）；train_index_manual.py 未恢复
 - 用户反馈 VC-1 的 tools 里找不到 train_index_manual.py：原因是之前按"VC-1 回退"要求执行的 revert 5f85408 一并删除了该脚本，之后重新应用时只恢复了 np.load 修复（0af5350）。已从 c0258fc 恢复脚本并推送到 origin/VC-1（bdd3a30）。
 - 按用户要求将 split_channels_new.py 从 VC-1-K 复制到 VC-1 并推送 origin/VC-1（语法检查通过，未实际运行）
+- 用户在 VC-1-K 训练报错 `FileNotFoundError: /app/logs/mute/0_gt_wavs/mute48k.wav`。原因：VC-1-K 的提交 dc8d949（2026-06-16 "move logs files"）删除了 logs/mute/ 下 8 个文件，而训练生成 filelist 时会加入 mute 样本。已从 dc8d949^ 恢复 logs/mute（与 VC-1 相同）并推送
