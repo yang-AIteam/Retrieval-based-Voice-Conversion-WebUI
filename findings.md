@@ -123,3 +123,4 @@
 - 这是 sklearn MiniBatchKMeans 的提前停止提示（连续 max_no_improvement=10 个 mini-batch inertia 无改善即停），不是错误
 - 只有特征帧数 > 2e5 时才会走 KMeans（压缩为 10000 个中心），之后会继续 faiss 训练和 add，正常结束会生成 added_*.index
 - 想保留全部特征可用 `tools/train_index_manual.py <实验名> v2 --no-kmeans`（index 更大、检索更慢）
+- 用户反馈 KMeans 收敛提示之后长时间无反应。KMeans 后只剩 10000×768 的 faiss IVF 训练和 add，正常应在几秒内完成；卡住最可能是同一进程内 sklearn 与 faiss 的 OpenMP 线程池冲突导致死锁。可通过 logs/<实验名>/ 下是否已有 total_fea.npy、trained_*.index 判断停在哪一步。对策：用 `OMP_NUM_THREADS=1 python tools/train_index_manual.py <实验名> v2` 单独构建
