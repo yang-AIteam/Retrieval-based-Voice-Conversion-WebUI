@@ -66,3 +66,8 @@
 ## 2026-10-23 模型交付清单（VC-1 SensorHubert 推理）
 - 确认 VC-1 推理加载链路：`infer/modules/vc/utils.py` / `infer/lib/rtrvc.py` → `rvc_hubert_loader.load_sensor_hubert(pth="assets/hubert/sensor_hubert_rvc.pth", config="assets/hubert/hf_model")`，只用 `HubertConfig.from_pretrained`，`hf_model/` 下需要 `config.json`。
 - 交付给他人需要：VC-1 分支代码（含 rvc_hubert_loader.py、transformers 依赖）、`assets/hubert/sensor_hubert_rvc.pth`、`assets/hubert/hf_model/config.json`、`assets/weights/<exp>.pth`、`logs/<exp>/added_*.index`（可选但推荐）、`assets/rmvpe/rmvpe.pt`（使用 rmvpe 提取 F0 时）。预训练底模、logs 中间文件不需要。
+
+## 2026-10-23 无历史交付 VC-1 代码
+- 建议用 `git archive --format=zip --prefix=RVC-VC1/ -o RVC-VC1.zip origin/VC-1` 导出最终快照（只含被跟踪文件，不含 .git 历史）。
+- 已确认 origin/VC-1 跟踪了 `.env`（仅路径配置，无敏感信息）和 `logs/mute/`（训练用，推理不需要，保留无妨），不含规划文件。
+- 权重、hubert、index、rmvpe 不在 git 中，需解压后另行放入对应目录。
