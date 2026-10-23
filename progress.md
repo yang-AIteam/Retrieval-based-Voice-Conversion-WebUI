@@ -62,3 +62,7 @@
 - 按用户要求将 split_channels_new.py 从 VC-1-K 复制到 VC-1 并推送 origin/VC-1（语法检查通过，未实际运行）
 - 用户在 VC-1-K 训练报错 `FileNotFoundError: /app/logs/mute/0_gt_wavs/mute48k.wav`。原因：VC-1-K 的提交 dc8d949（2026-06-16 "move logs files"）删除了 logs/mute/ 下 8 个文件，而训练生成 filelist 时会加入 mute 样本。已从 dc8d949^ 恢复 logs/mute（与 VC-1 相同）并推送
 - 用户确认：logs/<实验名>/ 有 total_fea.npy、无 trained_*.index，WebUI 卡在 faiss index.train。建议直接用 total_fea.npy（已是 KMeans 后的 10000 中心）在单线程下构建 index，无需重跑 KMeans
+
+## 2026-10-23 模型交付清单（VC-1 SensorHubert 推理）
+- 确认 VC-1 推理加载链路：`infer/modules/vc/utils.py` / `infer/lib/rtrvc.py` → `rvc_hubert_loader.load_sensor_hubert(pth="assets/hubert/sensor_hubert_rvc.pth", config="assets/hubert/hf_model")`，只用 `HubertConfig.from_pretrained`，`hf_model/` 下需要 `config.json`。
+- 交付给他人需要：VC-1 分支代码（含 rvc_hubert_loader.py、transformers 依赖）、`assets/hubert/sensor_hubert_rvc.pth`、`assets/hubert/hf_model/config.json`、`assets/weights/<exp>.pth`、`logs/<exp>/added_*.index`（可选但推荐）、`assets/rmvpe/rmvpe.pt`（使用 rmvpe 提取 F0 时）。预训练底模、logs 中间文件不需要。
