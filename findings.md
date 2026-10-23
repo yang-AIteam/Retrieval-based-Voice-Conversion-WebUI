@@ -118,3 +118,8 @@
 ## VC-1 能否训练原版 RVC（2026-10-22 调查）
 - 不能：VC-1 把 SensorHubert 写死在三处，没有开关——特征提取 `infer/modules/train/extract_feature_print.py`（pth_path=assets/hubert/sensor_hubert_rvc.pth）、推理 `infer/modules/vc/utils.py` 的 `load_hubert()`、实时变声 `infer/lib/rtrvc.py`
 - 原版 RVC（fairseq `assets/hubert/hubert_base.pt`）用 VC-1-K；两边的特征、模型、index 不能混用
+
+## 训练索引时的 "Converged (lack of improvement in inertia) at step X/Y"（2026-10-23）
+- 这是 sklearn MiniBatchKMeans 的提前停止提示（连续 max_no_improvement=10 个 mini-batch inertia 无改善即停），不是错误
+- 只有特征帧数 > 2e5 时才会走 KMeans（压缩为 10000 个中心），之后会继续 faiss 训练和 add，正常结束会生成 added_*.index
+- 想保留全部特征可用 `tools/train_index_manual.py <实验名> v2 --no-kmeans`（index 更大、检索更慢）
