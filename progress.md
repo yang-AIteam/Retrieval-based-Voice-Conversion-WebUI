@@ -95,3 +95,7 @@
 - torch/torchaudio 未显式列出，由 fairseq==0.12.2 依赖间接安装。
 - 风险：load_sensor_hubert 使用严格 load_state_dict，transformers/torch 版本若与导出 sensor_hubert_rvc.pth 时不同，pos_conv weight_norm 的键名（weight_g/weight_v vs parametrizations）可能不一致，建议固定为训练机上的版本。
 - 实时 GUI/API 额外需要 sounddevice、FreeSimpleGUI；UVR5 需要 opencv-python；ONNX 导出需要 onnx、onnxsim。均未加入。
+
+## 2026-10-26 VC-1-J 固定依赖版本
+- 用户提供训练机版本：transformers 4.57.6、torch 2.8.0、torchaudio 2.8.0。已写入 VC-1-J 的 requirements.txt / requirements_rvc.txt 并推送。
+- 注意：Linux 上 pip 默认安装的 torch 2.8.0 为 CUDA 12.8 版，需要较新的 NVIDIA 驱动；Dockerfile 基础镜像仍为 cuda:11.6.2，但 pip 版 torch 自带 CUDA 运行库，主要受宿主机驱动限制。
