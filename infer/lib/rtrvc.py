@@ -35,8 +35,8 @@ def printt(strr, *args):
         print(strr % args)
 
 
-# config.device=torch.device("cpu")########强制cpu测试
-# config.is_half=False########强制cpu测试
+# config.device=torch.device("cpu")########CPU強制テスト
+# config.is_half=False########CPU強制テスト
 class RVC:
     def __init__(
         self,
@@ -52,7 +52,7 @@ class RVC:
         last_rvc=None,
     ) -> None:
         """
-        初始化
+        初期化
         """
         try:
             if config.dml == True:
@@ -67,7 +67,7 @@ class RVC:
             self.config = config
             self.inp_q = inp_q
             self.opt_q = opt_q
-            # device="cpu"########强制cpu测试
+            # device="cpu"########CPU強制テスト
             self.device = config.device
             self.f0_up_key = key
             self.formant_shift = formant
@@ -286,7 +286,7 @@ class RVC:
     def get_f0_crepe(self, x, f0_up_key):
         if "privateuseone" in str(
             self.device
-        ):  ###不支持dml，cpu又太慢用不成，拿fcpe顶替
+        ):  ###DML非対応、CPUでは遅すぎて使えないため、FCPEで代替
             return self.get_f0(x, f0_up_key, 1, "fcpe")
         # printt("using crepe,device:%s"%self.device)
         f0, pd = torchcrepe.predict(
@@ -297,7 +297,7 @@ class RVC:
             self.f0_max,
             "full",
             batch_size=512,
-            # device=self.device if self.device.type!="privateuseone" else "cpu",###crepe不用半精度全部是全精度所以不愁###cpu延迟高到没法用
+            # device=self.device if self.device.type!="privateuseone" else "cpu",###crepeは半精度を使わず全て全精度なので問題なし###CPUは遅延が大きすぎて使えない
             device=self.device,
             return_periodicity=True,
         )
