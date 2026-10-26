@@ -81,3 +81,6 @@
 - VC-1-K 推理加载 `assets/hubert/hubert_base.pt`（fairseq，路径写死在 `infer/modules/vc/utils.py` 与 `infer/lib/rtrvc.py`），无 rvc_hubert_loader.py，不使用 hf_model/config.json。
 - 交付需要：VC-1-K 代码、`assets/hubert/hubert_base.pt`（自训 HuBERT 须为 fairseq 格式并以此文件名替换）、`assets/weights/<exp>.pth`（Docker 下在宿主机 `weights/`）、`added_*.index`（推荐）、`assets/rmvpe/rmvpe.pt`（选 rmvpe 时）。
 - VC-1-K 跟踪了 CLAUDE.md 与三个规划文件，`git archive` 导出时需排除。
+
+## 2026-10-26 新建分支 VC-1-J
+- 从 VC-1（b9dccd9）分出 `VC-1-J`，已推送到 origin 并设置跟踪 `origin/VC-1-J`。未推送到 upstream。
