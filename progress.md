@@ -88,3 +88,10 @@
 ## 2026-10-26 VC-1-J 注释日语化
 - VC-1-J：`infer/lib/rtrvc.py` 中 6 行中文注释/文档字符串译为日语；`infer/modules/vc/utils.py` 无中文，未改动。
 - 注意：rtrvc.py 为 CRLF 换行，首次用文本模式写回导致全文件 diff，已改为二进制读写保留换行后重做。py_compile 通过。
+
+## 2026-10-26 VC-1-J requirements 检查
+- requirements.txt 与 requirements_rvc.txt 内容完全相同（后者由 701f558 复制加入）；Dockerfile 使用 requirements.txt。
+- 扫描全部 import：WebUI 推理/训练路径缺 `transformers`（rvc_hubert_loader.py）。已在 VC-1-J 两个文件末尾追加，提交并推送。
+- torch/torchaudio 未显式列出，由 fairseq==0.12.2 依赖间接安装。
+- 风险：load_sensor_hubert 使用严格 load_state_dict，transformers/torch 版本若与导出 sensor_hubert_rvc.pth 时不同，pos_conv weight_norm 的键名（weight_g/weight_v vs parametrizations）可能不一致，建议固定为训练机上的版本。
+- 实时 GUI/API 额外需要 sounddevice、FreeSimpleGUI；UVR5 需要 opencv-python；ONNX 导出需要 onnx、onnxsim。均未加入。
