@@ -76,3 +76,8 @@
 - 训练小模型由 `infer/lib/train/process_ckpt.py` 的 `savee()` 保存到 `assets/weights/<name>.pth`（.env 中 weight_root 也指向此处）。
 - VC-1 的 docker-compose.yml 把宿主机 `./weights` 挂载到容器 `/app/assets/weights`，所以在宿主机上模型出现在仓库根目录的 `weights/`，而不是 `assets/weights/`；容器内路径仍为 `/app/assets/weights`。
 - git 中 `assets/weights/` 只跟踪一个隐藏的 `.gitignore`，文件管理器默认看不到，容易误以为该文件夹不存在。
+
+## 2026-10-26 VC-1-K 模型交付清单
+- VC-1-K 推理加载 `assets/hubert/hubert_base.pt`（fairseq，路径写死在 `infer/modules/vc/utils.py` 与 `infer/lib/rtrvc.py`），无 rvc_hubert_loader.py，不使用 hf_model/config.json。
+- 交付需要：VC-1-K 代码、`assets/hubert/hubert_base.pt`（自训 HuBERT 须为 fairseq 格式并以此文件名替换）、`assets/weights/<exp>.pth`（Docker 下在宿主机 `weights/`）、`added_*.index`（推荐）、`assets/rmvpe/rmvpe.pt`（选 rmvpe 时）。
+- VC-1-K 跟踪了 CLAUDE.md 与三个规划文件，`git archive` 导出时需排除。
