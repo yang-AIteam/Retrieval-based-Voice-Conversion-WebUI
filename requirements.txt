@@ -47,3 +47,5 @@ torchfcpe
 ffmpy==0.3.1
 python-dotenv>=1.0.0
 av
+# SensorHubert (rvc_hubert_loader.py) の読み込みに必要
+transformers
