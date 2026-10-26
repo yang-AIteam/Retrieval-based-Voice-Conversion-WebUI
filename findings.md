@@ -124,3 +124,10 @@
 - 只有特征帧数 > 2e5 时才会走 KMeans（压缩为 10000 个中心），之后会继续 faiss 训练和 add，正常结束会生成 added_*.index
 - 想保留全部特征可用 `tools/train_index_manual.py <实验名> v2 --no-kmeans`（index 更大、检索更慢）
 - 用户反馈 KMeans 收敛提示之后长时间无反应。KMeans 后只剩 10000×768 的 faiss IVF 训练和 add，正常应在几秒内完成；卡住最可能是同一进程内 sklearn 与 faiss 的 OpenMP 线程池冲突导致死锁。可通过 logs/<实验名>/ 下是否已有 total_fea.npy、trained_*.index 判断停在哪一步。对策：用 `OMP_NUM_THREADS=1 python tools/train_index_manual.py <实验名> v2` 单独构建
+
+## 2026-10-26 工具链版本更新的影响
+- pip：Dockerfile 固定 `pip==24.0`。pip ≥24.1 拒绝元数据不合规的旧包（fairseq 0.12.2 依赖的 omegaconf 2.0.x 的依赖声明不合规），会导致安装 fairseq 失败，不要升级 pip（保持 <24.1）。
+- certifi：仅为 HTTPS 根证书包，更新无害，只影响下载。
+- uv：项目未使用；若用 uv 代替 pip 安装，解析规则不同，fairseq/omegaconf 可能同样出问题，不建议。
+- sigstore：签名验证工具，与运行无关。
+- conda / pixi：只升级工具本身不改变已有环境；重新建环境时才可能解析出不同版本。项目依赖靠 requirements 中的固定版本保证。
