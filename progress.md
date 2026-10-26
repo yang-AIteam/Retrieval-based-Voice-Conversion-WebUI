@@ -99,3 +99,9 @@
 ## 2026-10-26 VC-1-J 固定依赖版本
 - 用户提供训练机版本：transformers 4.57.6、torch 2.8.0、torchaudio 2.8.0。已写入 VC-1-J 的 requirements.txt / requirements_rvc.txt 并推送。
 - 注意：Linux 上 pip 默认安装的 torch 2.8.0 为 CUDA 12.8 版，需要较新的 NVIDIA 驱动；Dockerfile 基础镜像仍为 cuda:11.6.2，但 pip 版 torch 自带 CUDA 运行库，主要受宿主机驱动限制。
+
+## 2026-10-26 实时（online）推理入口调查（VC-1-J）
+- 实时变声 GUI：`gui_v1.py`（Windows 用 go-realtime-gui.bat），引擎为 `infer/lib/rtrvc.py`，已改为加载 SensorHubert，可直接用。
+- API 版：`api_231006.py` / `api_240604.py`（FastAPI，端口 6242）使用 `tools/rvc_for_realtime.py`，其中仍写死 `hubert_base.pt`，未适配 SensorHubert。
+- gui_v1.py 依赖 FreeSimpleGUI、sounddevice（不在 requirements.txt；requirements-win-for-realtime_vc_gui.txt 写的是 PySimpleGUI，与代码不一致）。
+- 实时版需要本机声卡输入输出，Docker 容器内一般无法使用，应在接 sensor 麦克风的本地电脑上运行。
