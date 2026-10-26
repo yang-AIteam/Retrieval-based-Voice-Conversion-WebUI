@@ -105,3 +105,8 @@
 - API 版：`api_231006.py` / `api_240604.py`（FastAPI，端口 6242）使用 `tools/rvc_for_realtime.py`，其中仍写死 `hubert_base.pt`，未适配 SensorHubert。
 - gui_v1.py 依赖 FreeSimpleGUI、sounddevice（不在 requirements.txt；requirements-win-for-realtime_vc_gui.txt 写的是 PySimpleGUI，与代码不一致）。
 - 实时版需要本机声卡输入输出，Docker 容器内一般无法使用，应在接 sensor 麦克风的本地电脑上运行。
+
+## 2026-10-26 API 版实时推理适配 SensorHubert（VC-1-J）
+- `tools/rvc_for_realtime.py`：HuBERT 加载由 fairseq `hubert_base.pt` 改为 `rvc_hubert_loader.load_sensor_hubert`（sensor_hubert_rvc.pth + hf_model），与 c63308f 对 rtrvc.py 的改法一致；half 判断用 `str(self.device)` 以兼容 torch.device。保留 CRLF。
+- 验证：仅 py_compile 通过；本机无模型文件，未做实际推理测试。
+- 限制：RVCHubert 无 `final_proj`，v1 模型（256 维）在 rtrvc.py 与 rvc_for_realtime.py 中都不可用，仅支持 v2。
