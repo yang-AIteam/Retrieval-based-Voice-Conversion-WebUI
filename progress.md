@@ -84,3 +84,7 @@
 
 ## 2026-10-26 新建分支 VC-1-J
 - 从 VC-1（b9dccd9）分出 `VC-1-J`，已推送到 origin 并设置跟踪 `origin/VC-1-J`。未推送到 upstream。
+
+## 2026-10-26 VC-1-J 注释日语化
+- VC-1-J：`infer/lib/rtrvc.py` 中 6 行中文注释/文档字符串译为日语；`infer/modules/vc/utils.py` 无中文，未改动。
+- 注意：rtrvc.py 为 CRLF 换行，首次用文本模式写回导致全文件 diff，已改为二进制读写保留换行后重做。py_compile 通过。
