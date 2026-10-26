@@ -71,3 +71,8 @@
 - 建议用 `git archive --format=zip --prefix=RVC-VC1/ -o RVC-VC1.zip origin/VC-1` 导出最终快照（只含被跟踪文件，不含 .git 历史）。
 - 已确认 origin/VC-1 跟踪了 `.env`（仅路径配置，无敏感信息）和 `logs/mute/`（训练用，推理不需要，保留无妨），不含规划文件。
 - 权重、hubert、index、rmvpe 不在 git 中，需解压后另行放入对应目录。
+
+## 2026-10-26 assets/weights 位置说明
+- 训练小模型由 `infer/lib/train/process_ckpt.py` 的 `savee()` 保存到 `assets/weights/<name>.pth`（.env 中 weight_root 也指向此处）。
+- VC-1 的 docker-compose.yml 把宿主机 `./weights` 挂载到容器 `/app/assets/weights`，所以在宿主机上模型出现在仓库根目录的 `weights/`，而不是 `assets/weights/`；容器内路径仍为 `/app/assets/weights`。
+- git 中 `assets/weights/` 只跟踪一个隐藏的 `.gitignore`，文件管理器默认看不到，容易误以为该文件夹不存在。
