@@ -131,3 +131,10 @@
 - uv：项目未使用；若用 uv 代替 pip 安装，解析规则不同，fairseq/omegaconf 可能同样出问题，不建议。
 - sigstore：签名验证工具，与运行无关。
 - conda / pixi：只升级工具本身不改变已有环境；重新建环境时才可能解析出不同版本。项目依赖靠 requirements 中的固定版本保证。
+
+## 2026-10-26 pip 升级到 26.x 的影响（推断，未实测）
+- 已装好的环境：升级 pip 不改动已装包，WebUI/训练/推理运行不受影响。
+- 新装或重装依赖：omegaconf 2.0.x（fairseq 0.12.2 → hydra-core 1.0.x 需要 omegaconf<2.1）元数据不合规，pip ≥24.1 会跳过，导致 fairseq 安装失败。
+- pip 新版本默认 PEP 517 隔离构建，pyworld 等源码包可能用新版 numpy 构建，和 numpy==1.23.5 二进制不兼容；可用 `--no-build-isolation`。
+- 需确认 pip 26.x 是否仍支持 Python 3.9（Dockerfile 使用 3.9）。
+- 方案：安装依赖时临时用 pip 24.0，装完再升级到 26.2.2（运行无影响）。
