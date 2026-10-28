@@ -114,3 +114,10 @@
 ## 2026-10-28 VC-2-handoff-audit 添加手动建 index 脚本
 - 从 VC-1 复制 tools/train_index_manual.py 到 VC-2-handoff-audit（d211937，已 push）。两分支 infer-web.py 的 train_index() 完全一致。
 - 用法: python tools/train_index_manual.py <实验名> [v1|v2] [--no-kmeans]
+
+## 2026-10-28 VC-2-handoff-audit 配对模式同步切片（方案1）
+- 新增 infer/lib/paired_slice.py（paired_segments/to_samples）+ tests/test_paired_slice.py。
+- preprocess.py pipeline_paired：sensor 整条做推理同款预处理后，与 mic 按同一组秒级切点（per=3.7, overlap=0.3）切片，写 <stem>_<i>.wav；mic 逐段响度归一化。
+- runbook 同步更新（per 生效、STEM_0.wav）。
+- 验证：pytest 9 passed；本机无 soundfile/librosa/ffmpeg，用替身 load_audio 驱动 pipeline_paired，12.3s→4 段、2.5s→1 段，两侧文件名/时长一致，全部落在 bucket 范围内。未在训练机实跑。
+- 需要用户：删除旧的 logs/<exp>（0_gt_wavs、1_16k_wavs、2a/2b、3_feature768）后重新预处理→特征→训练→index。
