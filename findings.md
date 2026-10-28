@@ -153,3 +153,13 @@
 - VC-1 / VC-1-J：推理预处理一致 + index np.load 已修 → 可用。
 - VC-2：生成器可用，但普通 index 静默失效（pipeline.py:316 未修）→ index_rate 无效。
 - handoff-audit 独有：rvc_consist_off 环境变量（仅 A/B 实验用，默认关闭）。
+
+## 2026-10-28 VC-2-handoff-audit 训练比 VC-1 快很多的原因（代码分析，未实测）
+- train.py / data_utils.py / 模型结构两分支完全一致；差异只在 preprocess.py（配对模式不切片）和 extract_feature_print.py（只是去掉 layer_norm 选项，不影响速度）。
+- VC-1 普通模式：按 per=3.7s（重叠 0.3s）切片，片段数多，全部落在 bucket 范围内。
+- 配对模式（pipeline_paired）：整条写出不切片。DistributedBucketSampler（train.py:140，boundaries 100..900）
+  的 _create_buckets 会**静默丢弃**长度不在 (100, 900] 的样本。
+  length = 文件字节数 // (3*hop)，gt 为 float32 → 约 N/360（48k）。对应时长约 0.75s–6.75s（48k/40k 均是）。
+  → 超过约 6.75s 的配对录音全部不参与训练，每个 epoch 的 step 大幅减少 → "快"。
+- 另外：数据本身少（runbook 约 126 对）、runbook 用 -c 1（数据缓存到 GPU）也会加速。
+- 风险：被丢掉的数据也导致音色学习不足，可能是 VC-2 音色差的又一原因。需要在训练机上统计 0_gt_wavs 时长分布确认。
