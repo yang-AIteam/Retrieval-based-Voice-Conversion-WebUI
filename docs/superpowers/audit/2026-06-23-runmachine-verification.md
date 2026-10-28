@@ -14,7 +14,7 @@ git fetch && git checkout VC-2-handoff-audit && git pull
 mkdir -p logs/<exp>
 python infer/modules/train/preprocess.py <inp_root> 48000 4 logs/<exp> False 3.7
 ```
-参数：`<inp_root> sr n_p exp_dir noparallel per`。配对模式下 `per`(3.7) 不生效（不切片）、只为占位；`noparallel=False` 表示用多进程并行。
+参数：`<inp_root> sr n_p exp_dir noparallel per`。配对模式下 `per`(3.7) 同样生效：mic/sensor 用同一组时间切点同步切成 per 秒一段（重叠 0.3s），文件名为 `<stem>_<i>.wav`（不切片的话 >约 6.75s 的样本会被训练的 bucket sampler 静默丢弃）；日志每对打印 `Success (paired, N segments)`；`noparallel=False` 表示用多进程并行。
 
 **必须先确认配对生效：** preprocess 日志出现 `detected paired dataset: <N> pairs`（preprocess.py:226）。
 若没有这行 → 退化成单目录切片、配对没生效、#1 修复白做 → 停下检查 `<inp_root>` 摆法。
@@ -26,7 +26,7 @@ python infer/modules/train/preprocess.py <inp_root> 48000 4 logs/<exp> False 3.7
   `python -c "import soundfile as sf,glob; f=sorted(glob.glob('logs/<exp>/0_gt_wavs/*.wav'))[0]; print(f, sf.info(f).samplerate)"` → 48000。
 - `1_16k_wavs/` 抽一条确认是 **16k**：同上换目录 → 16000。
 - 抽一对同名文件确认时长一致（#5，差 < 0.05s）：
-  `python -c "import soundfile as sf; a=sf.info('logs/<exp>/0_gt_wavs/STEM.wav'); b=sf.info('logs/<exp>/1_16k_wavs/STEM.wav'); print(a.frames/a.samplerate, b.frames/b.samplerate)"`.
+  `python -c "import soundfile as sf; a=sf.info('logs/<exp>/0_gt_wavs/STEM_0.wav'); b=sf.info('logs/<exp>/1_16k_wavs/STEM_0.wav'); print(a.frames/a.samplerate, b.frames/b.samplerate)"`.
 
 ## 2. 确认源 mic 是真 48k 全频带（#3 关键坑）
 ```bash

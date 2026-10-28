@@ -22,6 +22,7 @@ from scipy.io import wavfile
 
 from infer.lib.audio import load_audio
 from infer.lib.slicer2 import Slicer
+from infer.lib.paired_slice import paired_segments, to_samples
 from infer.lib.sensor_preprocess import match_inference_sensor_preprocess
 
 f = open("%s/preprocess.log" % exp_dir, "a+")
@@ -132,9 +133,9 @@ class PreProcess:
         )
 
     def norm_write_paired(self, mic_audio, stem):
-        """配对模式: mic 整段(不切片)做响度归一化写入 0_gt_wavs/<stem>.wav (模型 SR)。
+        """配对模式: mic 片段做响度归一化写入 0_gt_wavs/<stem>.wav (模型 SR)。
 
-        与 norm_write 的 gt 写入幅度处理保持一致, 但不切片、文件名用 stem。
+        与 norm_write 的 gt 写入幅度处理保持一致, 但只写 gt、文件名用 stem。
         """
         tmp_max = np.abs(mic_audio).max()
         if tmp_max > 2.5:
@@ -184,13 +185,16 @@ class PreProcess:
             self.pipeline(path, idx0)
 
     def pipeline_paired(self, mic_path, sensor_path, stem):
-        """配对模式: 一对同步录音 (mic 全频带 + sensor) 直接写出, 不做静音切片。
+        """配对模式: 一对同步录音 (mic 全频带 + sensor) 用同一组时间切点同步切片后写出。
 
-        - mic   -> 重采样到模型 SR (self.sr, 通常 48k), 响度归一化, 写 0_gt_wavs/<stem>.wav
-        - sensor-> 16k mono, 经与推理操作等价的预处理 (peak-norm + 48Hz 高通, 绝不 layer_norm)
-                   后写 1_16k_wavs/<stem>.wav, 使训练特征与推理逐操作对齐 (#1 修复)
+        - sensor-> 16k mono, 先对整条做与推理操作等价的预处理 (peak-norm + 48Hz 高通,
+                   绝不 layer_norm), 再切片写 1_16k_wavs/<stem>_<i>.wav (#1 修复)
+        - mic   -> 重采样到模型 SR (self.sr, 通常 48k), 切片后逐段响度归一化,
+                   写 0_gt_wavs/<stem>_<i>.wav
+        - 切法同普通模式 (per 秒一段, 重叠 overlap 秒), 不做静音切片;
+          不切片的话 >约 6.75s 的样本会被训练的 bucket sampler 静默丢弃
 
-        下游 f0/feature/filelist 都靠 stem 配对, 故两侧 stem 必须完全一致。
+        下游 f0/feature/filelist 都靠文件名配对, 故两侧文件名必须完全一致。
         """
         try:
             mic_audio = load_audio(mic_path, self.sr)
@@ -207,15 +211,23 @@ class PreProcess:
                     % (stem, mic_dur, sensor_dur)
                 )
 
-            if not self.norm_write_paired(mic_audio, stem):
-                return
-
-            wavfile.write(
-                "%s/%s.wav" % (self.wavs16k_dir, stem),
-                16000,
-                sensor_audio.astype(np.float32),
-            )
-            println("%s\t-> Success (paired)" % stem)
+            duration = min(mic_dur, sensor_dur)
+            n_written = 0
+            for idx1, seg in enumerate(
+                paired_segments(duration, self.per, self.overlap)
+            ):
+                m0, m1 = to_samples(seg, self.sr)
+                s0, s1 = to_samples(seg, 16000)
+                name = "%s_%s" % (stem, idx1)
+                if not self.norm_write_paired(mic_audio[m0:m1], name):
+                    continue
+                wavfile.write(
+                    "%s/%s.wav" % (self.wavs16k_dir, name),
+                    16000,
+                    sensor_audio[s0:s1].astype(np.float32),
+                )
+                n_written += 1
+            println("%s\t-> Success (paired, %d segments)" % (stem, n_written))
         except:
             println("%s\t-> %s" % (stem, traceback.format_exc()))
 
