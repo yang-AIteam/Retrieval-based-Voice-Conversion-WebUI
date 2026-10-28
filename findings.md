@@ -146,3 +146,10 @@
 - ⚠️ 训练数据：runbook 中单说话人约 126 对（Vibravox），量偏少；若混入多说话人且都用 spk=0，输出音色会被平均。目标音色 = 训练集中 mic 的说话人，不能变成别人的声音。
 - ⚠️ F0 取自 sensor（rmvpe），体传导信号上 F0 误差会直接影响像不像。
 - 验证方法：VC-2-handoff-audit runbook §7 A/B（index_rate=0 隔离生成器，旧模型重跑、配方逐字相同）。
+
+## 2026-10-28 VC-2-handoff-audit 训练的模型能否在其他分支推理
+- 结论：不限于 handoff-audit。修复 #1（85e241f/e138e4a）只改**训练侧**（preprocess.py 对 sensor 加 peak-norm+48Hz 高通），推理侧本来就有这两步，模型文件格式不变。
+- 各分支推理都用 SensorHubert（assets/hubert/sensor_hubert_rvc.pth），与训练所用 hubert 一致即可。
+- VC-1 / VC-1-J：推理预处理一致 + index np.load 已修 → 可用。
+- VC-2：生成器可用，但普通 index 静默失效（pipeline.py:316 未修）→ index_rate 无效。
+- handoff-audit 独有：rvc_consist_off 环境变量（仅 A/B 实验用，默认关闭）。
