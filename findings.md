@@ -138,3 +138,11 @@
 - pip 新版本默认 PEP 517 隔离构建，pyworld 等源码包可能用新版 numpy 构建，和 numpy==1.23.5 二进制不兼容；可用 `--no-build-isolation`。
 - 需确认 pip 26.x 是否仍支持 Python 3.9（Dockerfile 使用 3.9）。
 - 方案：安装依赖时临时用 pip 24.0，装完再升级到 26.2.2（运行无影响）。
+
+## 2026-10-28 VC-2 下游 RVC 音色相似度差的代码层原因（仅代码审查，无实测数据）
+- 🔴 训练/推理 sensor 预处理不一致（handoff 审计 #1）：VC-2 `preprocess.py:pipeline_paired` 直接写原始 sensor 到 1_16k_wavs；推理 `modules.py:165-168` 做 peak-norm(÷max/0.95)，`pipeline.py:326` 再做 48Hz 高通 filtfilt。推理特征相对训练 OOD。修复只在 VC-2-handoff-audit（85e241f、e138e4a 等），未合入 VC-2。
+- 🔴 index 检索失效：VC-2 `pipeline.py:313-320` 对普通 index 的 replace 返回原路径，exists 为真 → np.load(faiss 文件) 抛异常 → index=None，index_rate 无效且不报错到界面。修复 054276c 也只在 VC-2-handoff-audit（VC-1 已另修）。
+- ⚠️ 跨域 index（build_cross_domain_index.py）的 value 是 mic 特征，但生成器训练输入是 sensor 特征，混入会造成域偏移；审计 runbook 明确配对流程不要用跨域索引。
+- ⚠️ 训练数据：runbook 中单说话人约 126 对（Vibravox），量偏少；若混入多说话人且都用 spk=0，输出音色会被平均。目标音色 = 训练集中 mic 的说话人，不能变成别人的声音。
+- ⚠️ F0 取自 sensor（rmvpe），体传导信号上 F0 误差会直接影响像不像。
+- 验证方法：VC-2-handoff-audit runbook §7 A/B（index_rate=0 隔离生成器，旧模型重跑、配方逐字相同）。
