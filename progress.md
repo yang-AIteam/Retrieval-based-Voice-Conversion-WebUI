@@ -110,3 +110,7 @@
 - `tools/rvc_for_realtime.py`：HuBERT 加载由 fairseq `hubert_base.pt` 改为 `rvc_hubert_loader.load_sensor_hubert`（sensor_hubert_rvc.pth + hf_model），与 c63308f 对 rtrvc.py 的改法一致；half 判断用 `str(self.device)` 以兼容 torch.device。保留 CRLF。
 - 验证：仅 py_compile 通过；本机无模型文件，未做实际推理测试。
 - 限制：RVCHubert 无 `final_proj`，v1 模型（256 维）在 rtrvc.py 与 rvc_for_realtime.py 中都不可用，仅支持 v2。
+
+## 2026-10-28 VC-2-handoff-audit 添加手动建 index 脚本
+- 从 VC-1 复制 tools/train_index_manual.py 到 VC-2-handoff-audit（d211937，已 push）。两分支 infer-web.py 的 train_index() 完全一致。
+- 用法: python tools/train_index_manual.py <实验名> [v1|v2] [--no-kmeans]
