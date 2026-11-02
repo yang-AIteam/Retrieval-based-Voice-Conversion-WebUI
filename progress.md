@@ -121,3 +121,8 @@
 - runbook 同步更新（per 生效、STEM_0.wav）。
 - 验证：pytest 9 passed；本机无 soundfile/librosa/ffmpeg，用替身 load_audio 驱动 pipeline_paired，12.3s→4 段、2.5s→1 段，两侧文件名/时长一致，全部落在 bucket 范围内。未在训练机实跑。
 - 需要用户：删除旧的 logs/<exp>（0_gt_wavs、1_16k_wavs、2a/2b、3_feature768）后重新预处理→特征→训练→index。
+
+## 2026-11-02 VC-1-J 最小可运行导出（离线 infer-web 推理）
+- 用户要交给公司的是 VC-1-J，只要最低可运行文件、不带 git 历史。用 `git archive origin/VC-1-J -- <路径>` 导出 49 个文件。
+- 去掉：训练/预处理脚本、ONNX 导出（懒加载）、ipex（try 保护）、实时 GUI/API、其他语言包、docs、logs/mute。uvr5 相关 py 保留，因 infer-web.py 启动时就 import。权重仍需另给。
+- 验证：干净目录中用替身替换第三方库，infer-web.py 能跑到文件末尾，全部 py 语法解析通过；唯一缺失为 FAQ 页的 docs/en/faq_en.md（已被 try/except 捕获，页面显示报错）。未用真实依赖和模型实跑推理。
