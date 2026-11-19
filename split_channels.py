@@ -3,7 +3,7 @@ import struct
 import os
 import glob
 
-def split_stereo(input_path, output_dir=None):
+def split_stereo(input_path, output_dir=None, swap=False):
     if output_dir is None:
         output_dir = os.path.dirname(input_path)
 
@@ -25,8 +25,10 @@ def split_stereo(input_path, output_dir=None):
     fmt = {1: 'B', 2: 'h', 4: 'i'}[width]
     samples = struct.unpack(f'<{len(frames) // width}{fmt}', frames)
 
-    left_samples  = samples[0::2]  # Lch = 話筒
-    right_samples = samples[1::2]  # Rch = sensor
+    left_samples  = samples[0::2]
+    right_samples = samples[1::2]
+    # デフォルト: Lch = mic, Rch = sensor / swap=True: Lch = sensor, Rch = mic
+    mic_samples, sensor_samples = (right_samples, left_samples) if swap else (left_samples, right_samples)
 
     def write_mono(path, samples_mono):
         packed = struct.pack(f'<{len(samples_mono)}{fmt}', *samples_mono)
@@ -37,19 +39,36 @@ def split_stereo(input_path, output_dir=None):
             dst.writeframes(packed)
         print(f"書き出し: {path}")
 
-    write_mono(os.path.join(output_dir, f"{base}_mic.wav"),    left_samples)
-    write_mono(os.path.join(output_dir, f"{base}_sensor.wav"), right_samples)
+    write_mono(os.path.join(output_dir, f"{base}_mic.wav"),    mic_samples)
+    write_mono(os.path.join(output_dir, f"{base}_sensor.wav"), sensor_samples)
 
 
 if __name__ == "__main__":
-    datasets_dir = os.path.join(os.path.dirname(__file__), "datasets")
-    wav_files = glob.glob(os.path.join(datasets_dir, "*.wav"))
+    import argparse
 
-    # 既に分割済みのファイルは除外
-    wav_files = [f for f in wav_files if not (f.endswith("_mic.wav") or f.endswith("_sensor.wav"))]
+    parser = argparse.ArgumentParser(description="ステレオ WAV を Lch(mic) / Rch(sensor) に分割")
+    parser.add_argument("-i", "--input", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasets"),
+                        help="入力: WAV ファイル or ディレクトリ (default: ./datasets)")
+    parser.add_argument("-o", "--output", default=None,
+                        help="出力ディレクトリ (default: 入力ファイルと同じ場所)")
+    parser.add_argument("--swap", action="store_true",
+                        help="Lch = sensor, Rch = mic として分割 (default: Lch = mic, Rch = sensor)")
+    args = parser.parse_args()
+
+    if os.path.isdir(args.input):
+        wav_files = glob.glob(os.path.join(args.input, "*.wav"))
+        # 既に分割済みのファイルは除外
+        wav_files = [f for f in wav_files if not (f.endswith("_mic.wav") or f.endswith("_sensor.wav"))]
+    elif os.path.isfile(args.input):
+        wav_files = [args.input]
+    else:
+        raise SystemExit(f"入力が見つかりません: {args.input}")
+
+    if args.output:
+        os.makedirs(args.output, exist_ok=True)
 
     if not wav_files:
-        print("datasets/ に WAV ファイルが見つかりません。")
+        print(f"{args.input} に WAV ファイルが見つかりません。")
     else:
         for wav in sorted(wav_files):
-            split_stereo(wav, output_dir=datasets_dir)
+            split_stereo(wav, output_dir=args.output, swap=args.swap)
